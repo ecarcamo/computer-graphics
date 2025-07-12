@@ -30,4 +30,3 @@ Thumbs.db
 # Ignorar todos los lock files, incluyendo Cargo.lock
 *.lock
 
-lab1-filling_any_polygon/
