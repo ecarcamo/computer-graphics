@@ -12,19 +12,17 @@ fn main() {
     fb.set_background_color(Color::new(50, 50, 100, 255));
     fb.clear();
 
-    let polygon1 = vec![
-        Vector2::new(165.0, 380.0), Vector2::new(185.0, 360.0),
-        Vector2::new(180.0, 330.0), Vector2::new(207.0, 345.0),
-        Vector2::new(233.0, 330.0), Vector2::new(230.0, 360.0),
-        Vector2::new(250.0, 380.0), Vector2::new(220.0, 385.0),
-        Vector2::new(205.0, 410.0), Vector2::new(193.0, 383.0),
+    
+    let polygon2 = vec![
+        Vector2::new(321.0, 335.0), Vector2::new(288.0, 286.0),
+        Vector2::new(339.0, 251.0), Vector2::new(374.0, 302.0),
     ];
-    fb.set_current_color(Color::YELLOW);
-    fill_polygon(&mut fb, &polygon1);
+    fb.set_current_color(Color::BLUE);
+    fill_polygon(&mut fb, &polygon2);
     fb.set_current_color(Color::WHITE);
-    for i in 0..polygon1.len() {
-        let a = polygon1[i];
-        let b = polygon1[(i + 1) % polygon1.len()];
+    for i in 0..polygon2.len() {
+        let a = polygon2[i];
+        let b = polygon2[(i + 1) % polygon2.len()];
         line(&mut fb, a, b);
     }
 
