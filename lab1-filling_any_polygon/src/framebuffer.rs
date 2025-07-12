@@ -29,11 +29,12 @@ impl Framebuffer {
 
     pub fn point(&mut self, pos: Vector2) {
         let x = pos.x as i32;
-        let y = pos.y as i32;
+        let h = self.image.height();
+        let y_src = pos.y as i32;
+        let y = h - 1 - y_src;
         self.image.draw_pixel(x, y, self.current_color);
     }
 
-    /// Exporta el contenido del framebuffer a un archivo BMP
     pub fn render_to_file(&self, file: &str) {
         self.image.export_image(file);
     }
