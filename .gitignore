@@ -1,0 +1,32 @@
+# — Rust/Cargo —  
+# Ignora los directorios de compilación de cualquier proyecto
+target/
+
+# Archivos temporales y metadatos de Rust
+*.rs.bk
+*.rmeta
+
+# — Lock files —  
+# Ignora todos los lock files…
+*.lock
+# …excepto los Cargo.lock de Rust
+!**/Cargo.lock
+
+# — Editores / IDEs —  
+.vscode/
+.idea/
+
+# — Sistema operativo —  
+.DS_Store
+Thumbs.db
+
+# — Otros —  
+# Archivos de log  
+*.log  
+# Swap y archivos temporales  
+*.swp
+*~
+
+# Ignorar todos los lock files, incluyendo Cargo.lock
+*.lock
+
