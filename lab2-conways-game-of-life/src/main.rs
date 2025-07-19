@@ -25,10 +25,25 @@ fn main() {
 
     let mut translate_x = 0.0;
     let mut translate_y = 0.0;
+    let mut velocity_x = 1.0;
+    let mut velocity_y = 1.0;
 
     while !window.window_should_close() {
-        translate_x += 1.0;
-        translate_y += 1.0;
+        if window.is_key_pressed(KeyboardKey::KEY_S) {  
+            framebuffer.render_to_file("out.bmp");
+            println!("Renderizado guardado en out.bmp");
+        }
+
+        if translate_x <= -165.0 || translate_x >= (window_width as f32 - 761.0) {
+            velocity_x = -velocity_x;
+        }
+
+        if translate_y <= -36.0 || translate_y >= (window_height as f32 - 410.0) {
+            velocity_y = -velocity_y;
+        }
+
+        translate_x += velocity_x;
+        translate_y += velocity_y;
 
         framebuffer.clear();
 
@@ -39,8 +54,6 @@ fn main() {
         thread::sleep(Duration::from_millis(16));
     }
 
-    framebuffer.render_to_file("out.bmp");
-    println!("Renderizado guardado en out.bmp");
 }
 
 
