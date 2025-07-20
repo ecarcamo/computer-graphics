@@ -3,7 +3,7 @@
 ## 📹 Video Demostración
 
 <!-- Aquí subirás tu video de demostración -->
-[![Video Demo](https://img.shields.io/badge/Video-Demo-red?style=for-the-badge&logo=youtube)](URL_DEL_VIDEO_AQUI)
+![video-funcionamiento-conways-game-of-life](https://github.com/user-attachments/assets/9154974e-53ca-447c-8b3e-c737fdb3c6c8)
 
 
 ---
