@@ -30,7 +30,7 @@ impl GameOfLife {
         
         for dx in -1i32..=1i32 {
             for dy in -1i32..=1i32 {
-                if dx == 0 && dy == 0 { continue; } // No contamos la célula misma
+                if dx == 0 && dy == 0 { continue; } 
                 
                 let nx = x as i32 + dx;
                 let ny = y as i32 + dy;
@@ -47,7 +47,6 @@ impl GameOfLife {
     }
     
     pub fn update(&mut self) {
-        // Calcular la siguiente generación
         for y in 0..self.height {
             for x in 0..self.width {
                 let neighbors = self.count_neighbors(x, y);

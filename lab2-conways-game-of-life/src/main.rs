@@ -6,8 +6,13 @@ use std::{thread, time::Duration};
 use raylib::prelude::*;
 use framebuffer::Framebuffer;
 use game_of_life::GameOfLife;
+use rand::{rng, Rng}; 
 
 use patterns::pulsar::create_multiple_pulsars;
+use patterns::beacon::create_multiple_beacons;
+use patterns::glider_creator::{Direction, create_multiple_creators_gliders_with_directions};
+use patterns::heavy_weight_spaceship::create_multiple_heavy_weight_spaceships;
+
 
 fn main() {
     let window_width = 800;
@@ -19,7 +24,7 @@ fn main() {
 
     let (mut window, raylib_thread) = raylib::init()
         .size(window_width, window_height)
-        .title("Conway's Game of Life - True Pulsar Edition")
+        .title("Conway's Game of Life - Esteban Edition")
         .log_level(TraceLogLevel::LOG_WARNING)
         .build();
 
@@ -29,20 +34,44 @@ fn main() {
     let mut game = GameOfLife::new(game_width, game_height);
     
 
-   let positions = [
-        (25, 25),  // Esquina superior izquierda
-        (75, 25),  // Esquina superior derecha
-        (25, 75),  // Esquina inferior izquierda
-        (75, 75),  // Esquina inferior derecha
-        (50, 50),  // Centro
+    let positions_pulsars = [
+         (25, 25),  
+         (75, 25),  
+         (25, 75),  
+         (75, 75),  
+         (50, 50),  
+     ];
+
+     create_multiple_pulsars(&mut game, &positions_pulsars);
+
+
+     let positions_beacons = [ 
+         (50, 50),  
+     ];
+
+     create_multiple_beacons(&mut game, &positions_beacons);
+
+
+    let glider_configs = [
+        (5, 97, Direction::Up),     
     ];
+    
+    create_multiple_creators_gliders_with_directions(&mut game, &glider_configs);
 
-    create_multiple_pulsars(&mut game, &positions);
+    let mut rng = rng();
 
+    let heavy_weight_spaceship_configs: Vec<(usize, usize)> = (0..6)
+        .map(|_| {
+            let x = rng.random_range(10..90);
+            let y = rng.random_range(10..90);
+            (x, y)
+        })
+        .collect();
 
+    create_multiple_heavy_weight_spaceships(&mut game, &heavy_weight_spaceship_configs);
 
-
-    thread::sleep(Duration::from_millis(500)); // Más lento para ver las 3 fases
+    //esperar que cargue el primer frame
+    thread::sleep(Duration::from_millis(1000)); 
 
 
     while !window.window_should_close() {
@@ -60,6 +89,6 @@ fn main() {
 
         framebuffer.swap_buffers(&mut window, &raylib_thread);
 
-        thread::sleep(Duration::from_millis(200)); // Más lento para ver las 3 fases
+        thread::sleep(Duration::from_millis(100)); // Más lento para ver las 3 fases
     }
 }
