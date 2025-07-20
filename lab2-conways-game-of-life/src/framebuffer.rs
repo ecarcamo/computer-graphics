@@ -51,4 +51,14 @@ impl Framebuffer {
         }
     }
 
+    // pub fn get_color(&self, x: i32, y:i32) -> Color {
+    //     if x<0 || y<0  || x>= self.image.width() || y>= self.image.height() {
+    //         return Color::BLACK; 
+    //     }
+    //     let h = self.image.height();
+    //     let y_flipped = h - 1 - y; 
+
+    //     Color::BLACK
+    // }
+
 }
