@@ -9,9 +9,10 @@ use game_of_life::GameOfLife;
 use rand::{rng, Rng}; 
 
 use patterns::pulsar::create_multiple_pulsars;
-use patterns::beacon::create_multiple_beacons;
+use patterns::blinker::create_multiple_blinkers;
 use patterns::glider_creator::{Direction, create_multiple_creators_gliders_with_directions};
 use patterns::heavy_weight_spaceship::create_multiple_heavy_weight_spaceships;
+use patterns::toad::create_multiple_toads;
 
 
 fn main() {
@@ -45,11 +46,11 @@ fn main() {
      create_multiple_pulsars(&mut game, &positions_pulsars);
 
 
-     let positions_beacons = [ 
+     let positions_blinkers = [ 
          (50, 50),  
      ];
 
-     create_multiple_beacons(&mut game, &positions_beacons);
+    create_multiple_blinkers(&mut game, &positions_blinkers);
 
 
     let glider_configs = [
@@ -58,9 +59,25 @@ fn main() {
     
     create_multiple_creators_gliders_with_directions(&mut game, &glider_configs);
 
+
+
+    let positions_heavy_weight_spaceships = [ 
+        (2, 2), 
+        (15,2),
+        (27,2),
+        (40,2),
+        (52,2),
+        (65,2),
+        (77,2),
+        (90,2),
+     ];
+
+    create_multiple_heavy_weight_spaceships(&mut game, &positions_heavy_weight_spaceships);
+
+
     let mut rng = rng();
 
-    let heavy_weight_spaceship_configs: Vec<(usize, usize)> = (0..6)
+    let toad_config: Vec<(usize, usize)> = (0..9)
         .map(|_| {
             let x = rng.random_range(10..90);
             let y = rng.random_range(10..90);
@@ -68,7 +85,7 @@ fn main() {
         })
         .collect();
 
-    create_multiple_heavy_weight_spaceships(&mut game, &heavy_weight_spaceship_configs);
+    create_multiple_toads(&mut game, &toad_config);
 
     //esperar que cargue el primer frame
     thread::sleep(Duration::from_millis(1000)); 

@@ -25,24 +25,50 @@ impl GameOfLife {
         }
     }
     
-    fn count_neighbors(&self, x: usize, y: usize) -> u8 {
+    // ✅ Función auxiliar para wrap-around
+    fn wrap_coordinates(&self, x: i32, y: i32) -> (usize, usize) {
+        let wrapped_x = if x < 0 {
+            (self.width as i32 + x) as usize
+        } else if x >= self.width as i32 {
+            (x - self.width as i32) as usize
+        } else {
+            x as usize
+        };
+
+        let wrapped_y = if y < 0 {
+            (self.height as i32 + y) as usize
+        } else if y >= self.height as i32 {
+            (y - self.height as i32) as usize
+        } else {
+            y as usize
+        };
+
+        (wrapped_x, wrapped_y)
+    }
+
+    // ✅ Modificar count_neighbors para usar wrap-around
+    fn count_neighbors(&self, x: usize, y: usize) -> usize {
         let mut count = 0;
         
-        for dx in -1i32..=1i32 {
-            for dy in -1i32..=1i32 {
-                if dx == 0 && dy == 0 { continue; } 
+        // Verificar las 8 celdas vecinas
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue; // Saltar la celda central
+                }
                 
-                let nx = x as i32 + dx;
-                let ny = y as i32 + dy;
+                let neighbor_x = x as i32 + dx;
+                let neighbor_y = y as i32 + dy;
                 
-                // Verificar límites
-                if nx >= 0 && ny >= 0 && nx < self.width as i32 && ny < self.height as i32 {
-                    if self.current_generation[ny as usize][nx as usize] {
-                        count += 1;
-                    }
+                // ✅ Usar wrap-around en lugar de verificar límites
+                let (wrapped_x, wrapped_y) = self.wrap_coordinates(neighbor_x, neighbor_y);
+                
+                if self.current_generation[wrapped_y][wrapped_x] {
+                    count += 1;
                 }
             }
         }
+        
         count
     }
     
