@@ -13,10 +13,10 @@ pub fn process_events(player: &mut Player, rl: &RaylibHandle) {
     const MOVE_SPEED: f32 = 10.0;
     const ROTATION_SPEED: f32 = PI / 10.0;
 
-    if rl.is_key_down(KeyboardKey::KEY_LEFT) {
+    if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
         player.a += ROTATION_SPEED;
     }
-    if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
+    if rl.is_key_down(KeyboardKey::KEY_LEFT) {
         player.a -= ROTATION_SPEED;
     }
     if rl.is_key_down(KeyboardKey::KEY_DOWN) {

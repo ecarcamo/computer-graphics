@@ -119,6 +119,10 @@ fn render_world(
   }
 }
 
+fn draw_fps(d: &mut RaylibDrawHandle, fps: u32) {
+  d.draw_text(&format!("FPS: {}", fps), 10, 10, 20, Color::RAYWHITE);
+}
+
 fn main() {
   let window_width = 1300;
   let window_height = 900;
@@ -160,9 +164,15 @@ fn main() {
       render_world(&mut framebuffer, &maze, block_size, &player);
     }
 
-    // 4. swap buffers
-    framebuffer.swap_buffers(&mut window, &raylib_thread);
+    let fps = window.get_fps();
 
+    framebuffer.swap_buffers(
+      &mut window, 
+      &raylib_thread, 
+      draw_fps,
+      fps
+    );
+    
     thread::sleep(Duration::from_millis(16));
   }
 }
