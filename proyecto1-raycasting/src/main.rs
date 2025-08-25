@@ -151,7 +151,7 @@ fn main() {
     let delta_time = window.get_frame_time();
 
     // 2. move the player on user input
-    process_events(&mut player, &window, delta_time);
+    process_events(&mut player, &window, delta_time, &maze, block_size);
 
     let mut mode = "3D";
 
