@@ -25,11 +25,15 @@ fn is_position_valid(x: f32, y: f32, maze: &crate::maze::Maze, block_size: usize
     maze[j][i] == ' ' // ' ' representa espacio vacío
 }
 
-
-pub fn process_events(player: &mut Player, rl: &RaylibHandle, delta_time: f32, maze: &crate::maze::Maze, block_size: usize) {
-
+pub fn process_events(
+    player: &mut Player,
+    rl: &RaylibHandle,
+    delta_time: f32,
+    maze: &crate::maze::Maze,
+    block_size: usize,
+) {
     const MOVE_SPEED: f32 = 200.0;
-    const ROTATION_SPEED: f32 = PI ;
+    const ROTATION_SPEED: f32 = PI;
 
     if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
         player.a += ROTATION_SPEED * delta_time;
@@ -40,7 +44,6 @@ pub fn process_events(player: &mut Player, rl: &RaylibHandle, delta_time: f32, m
 
     let mut new_x = player.pos.x;
     let mut new_y = player.pos.y;
-
 
     if rl.is_key_down(KeyboardKey::KEY_DOWN) {
         new_x -= MOVE_SPEED * player.a.cos() * delta_time;

@@ -14,4 +14,3 @@ pub fn load_maze(filename: &str) -> Maze {
         .map(|line| line.unwrap().chars().collect())
         .collect()
 }
-
