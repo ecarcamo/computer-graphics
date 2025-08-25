@@ -13,12 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          components: rustfmt
+      - name: Find crate directory
+        id: find-crate
+        run: |
+          echo "CRATE_DIR=$(find . -name Cargo.toml -exec dirname {} \; | head -n 1)" >> $GITHUB_ENV
 
       - name: Run cargo fmt
         run: cargo fmt -- --check
+        working-directory: ${{ env.CRATE_DIR }}
