@@ -107,6 +107,34 @@ fn draw_fps(d: &mut RaylibDrawHandle, fps: u32) {
     d.draw_text(&format!("FPS: {}", fps), 10, 10, 20, Color::RAYWHITE);
 }
 
+pub fn render_minimap(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    block_size: usize,
+    player: &Player,
+    offset_x: usize,
+    offset_y: usize,
+) {
+    // Dibuja el laberinto con offset
+    for (row_index, row) in maze.iter().enumerate() {
+        for (col_index, &cell) in row.iter().enumerate() {
+            let xo = offset_x + col_index * block_size;
+            let yo = offset_y + row_index * block_size;
+            draw_cell(framebuffer, xo, yo, block_size, cell);
+        }
+    }
+
+    // Dibuja el jugador en el minimapa
+    framebuffer.set_current_color(Color::YELLOW);
+    let px = offset_x + (player.pos.x / 100.0 * block_size as f32) as usize;
+    let py = offset_y + (player.pos.y / 100.0 * block_size as f32) as usize;
+    for x in px..px + block_size / 4 {
+        for y in py..py + block_size / 4 {
+            framebuffer.set_pixel(x as u32, y as u32);
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -143,7 +171,7 @@ fn main() {
             mode = if mode == "2D" { "3D" } else { "2D" };
         }
 
-        // 3. draw stuff
+
         if mode == "2D" {
             render_maze(&mut framebuffer, &maze, block_size, &player);
         } else {
@@ -151,6 +179,25 @@ fn main() {
         }
 
         let fps = window.get_fps();
+
+
+        // 3. draw stuff
+
+        // --- MINIMAPA ---
+        let minimap_block_size: usize = 20;
+        let minimap_offset_x: usize = (window_width as usize)
+            .saturating_sub(maze[0].len() * minimap_block_size)
+            .saturating_sub(20);
+        let minimap_offset_y: usize = 20;
+        render_minimap(
+            &mut framebuffer,
+            &maze,
+            minimap_block_size,
+            &player,
+            minimap_offset_x,
+            minimap_offset_y,
+        );
+        // --- FIN MINIMAPA ---
 
         framebuffer.swap_buffers(&mut window, &raylib_thread, draw_fps, fps);
 
