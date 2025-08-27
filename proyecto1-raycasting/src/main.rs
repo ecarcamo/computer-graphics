@@ -135,6 +135,98 @@ pub fn render_minimap(
     }
 }
 
+fn mostrar_pantalla_bienvenida(
+    window: &mut RaylibHandle,
+    raylib_thread: &RaylibThread,
+    window_width: i32,
+    window_height: i32,
+) {
+    // Carga el fondo de bienvenida
+    let fondo = window
+        .load_texture(raylib_thread, "assets/fondo_bienvenida.jpg")
+        .expect("No se pudo cargar el fondo de bienvenida");
+
+    let fondo_width = fondo.width();
+    let fondo_height = fondo.height();
+
+    loop {
+        let mut d = window.begin_drawing(raylib_thread);
+        d.clear_background(Color::BLACK);
+
+        // Dibuja el fondo
+        let scale_x = window_width as f32 / fondo_width as f32;
+        let scale_y = window_height as f32 / fondo_height as f32;
+        let scale = scale_x.max(scale_y);
+
+        d.draw_texture_ex(
+            &fondo,
+            Vector2::new(0.0, 0.0),
+            0.0,
+            scale,
+            Color::WHITE,
+        );
+
+        // Dibuja el texto de bienvenida
+        d.draw_text(
+            "PRESIONA ENTER para jugar",
+            window_width / 2 - 250,
+            window_height / 2 - 40,
+            40,
+            Color::new(200, 30, 30, 255), // Rojo estilo Rayo McQueen
+        );
+        d.draw_text(
+            "¡Bienvenido!",
+            window_width / 2 - 150,
+            window_height / 2 - 100,
+            50,
+            Color::new(255, 215, 0, 255), // Amarillo dorado
+        );
+
+        // Panel de instrucciones estilo DOOM
+        let panel_width = 600;
+        let panel_height = 180;
+        let panel_x = window_width / 2 - panel_width / 2;
+        let panel_y = window_height / 2 + 40;
+
+        // Fondo del panel (semi-transparente)
+        d.draw_rectangle(panel_x, panel_y, panel_width, panel_height, Color::new(30, 30, 30, 200));
+
+        // Borde del panel
+        d.draw_rectangle_lines(panel_x, panel_y, panel_width, panel_height, Color::new(255, 215, 0, 255));
+
+        // Título del panel
+        d.draw_text(
+            "INSTRUCCIONES",
+            panel_x + 20,
+            panel_y + 10,
+            30,
+            Color::new(255, 215, 0, 255),
+        );
+
+        // Contenido del panel
+        d.draw_text(
+            "W / Up : Avanzar\nS / Down : Retroceder\nA / Left : Girar izquierda\nD / Right : Girar derecha\nM : Cambiar modo 2D/3D",
+            panel_x + 20,
+            panel_y + 50,
+            24,
+            Color::RAYWHITE,
+        );
+
+        // Tu nombre en la esquina inferior derecha
+        d.draw_text(
+            "Esteban Cárcamo",
+            window_width - 260,
+            window_height - 40,
+            32,
+            Color::new(255, 215, 0, 255),
+        );
+
+        if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
+            break;
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -155,6 +247,8 @@ fn main() {
         a: PI / 3.0,
         fov: PI / 3.0,
     };
+
+    mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
 
     while !window.window_should_close() {
         // 1. clear framebuffer

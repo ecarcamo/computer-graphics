@@ -35,11 +35,11 @@ pub fn process_events(
     const MOVE_SPEED: f32 = 200.0;
     const ROTATION_SPEED: f32 = PI;
 
-    // Rotación con teclado
-    if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
+    // Rotación con teclado (flechas y A/D)
+    if rl.is_key_down(KeyboardKey::KEY_RIGHT) || rl.is_key_down(KeyboardKey::KEY_D) {
         player.a += ROTATION_SPEED * delta_time;
     }
-    if rl.is_key_down(KeyboardKey::KEY_LEFT) {
+    if rl.is_key_down(KeyboardKey::KEY_LEFT) || rl.is_key_down(KeyboardKey::KEY_A) {
         player.a -= ROTATION_SPEED * delta_time;
     }
 
@@ -50,12 +50,12 @@ pub fn process_events(
     let mut new_x = player.pos.x;
     let mut new_y = player.pos.y;
 
-    // Movimiento con teclado
-    if rl.is_key_down(KeyboardKey::KEY_DOWN) {
+    // Movimiento con teclado (flechas y W/S)
+    if rl.is_key_down(KeyboardKey::KEY_DOWN) || rl.is_key_down(KeyboardKey::KEY_S) {
         new_x -= MOVE_SPEED * player.a.cos() * delta_time;
         new_y -= MOVE_SPEED * player.a.sin() * delta_time;
     }
-    if rl.is_key_down(KeyboardKey::KEY_UP) {
+    if rl.is_key_down(KeyboardKey::KEY_UP) || rl.is_key_down(KeyboardKey::KEY_W) {
         new_x += MOVE_SPEED * player.a.cos() * delta_time;
         new_y += MOVE_SPEED * player.a.sin() * delta_time;
     }
