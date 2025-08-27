@@ -200,14 +200,15 @@ fn mostrar_pantalla_bienvenida(
     raylib_thread: &RaylibThread,
     window_width: i32,
     window_height: i32,
-) {
-    // Carga el fondo de bienvenida
+) -> u8 {
     let fondo = window
         .load_texture(raylib_thread, "assets/fondo_bienvenida.jpg")
         .expect("No se pudo cargar el fondo de bienvenida");
 
     let fondo_width = fondo.width();
     let fondo_height = fondo.height();
+
+    let mut nivel_seleccionado: u8 = 1;
 
     loop {
         let mut d = window.begin_drawing(raylib_thread);
@@ -226,65 +227,49 @@ fn mostrar_pantalla_bienvenida(
             Color::WHITE,
         );
 
-        // Dibuja el texto de bienvenida
-        d.draw_text(
-            "PRESIONA ENTER para jugar",
-            window_width / 2 - 250,
-            window_height / 2 - 40,
-            40,
-            Color::new(200, 30, 30, 255), // Rojo estilo Rayo McQueen
-        );
+        // Título y texto
         d.draw_text(
             "¡Bienvenido!",
             window_width / 2 - 150,
-            window_height / 2 - 100,
+            window_height / 2 - 120,
             50,
-            Color::new(255, 215, 0, 255), // Amarillo dorado
-        );
-
-        // Panel de instrucciones estilo DOOM
-        let panel_width = 600;
-        let panel_height = 180;
-        let panel_x = window_width / 2 - panel_width / 2;
-        let panel_y = window_height / 2 + 40;
-
-        // Fondo del panel (semi-transparente)
-        d.draw_rectangle(panel_x, panel_y, panel_width, panel_height, Color::new(30, 30, 30, 200));
-
-        // Borde del panel
-        d.draw_rectangle_lines(panel_x, panel_y, panel_width, panel_height, Color::new(255, 215, 0, 255));
-
-        // Título del panel
-        d.draw_text(
-            "INSTRUCCIONES",
-            panel_x + 20,
-            panel_y + 10,
-            30,
             Color::new(255, 215, 0, 255),
         );
-
-        // Contenido del panel
         d.draw_text(
-            "W / Up : Avanzar\nS / Down : Retroceder\nA / Left : Girar izquierda\nD / Right : Girar derecha\nM : Cambiar modo 2D/3D",
-            panel_x + 20,
-            panel_y + 50,
-            24,
+            "Selecciona nivel:",
+            window_width / 2 - 180,
+            window_height / 2 - 40,
+            40,
             Color::RAYWHITE,
         );
 
-        // Tu nombre en la esquina inferior derecha
+        // Opciones de nivel
+        let color_facil = if nivel_seleccionado == 1 { Color::YELLOW } else { Color::RAYWHITE };
+        let color_medio = if nivel_seleccionado == 2 { Color::YELLOW } else { Color::RAYWHITE };
+        let color_dificil = if nivel_seleccionado == 3 { Color::YELLOW } else { Color::RAYWHITE };
+
+        d.draw_text("1 - Fácil", window_width / 2 - 100, window_height / 2 + 10, 32, color_facil);
+        d.draw_text("2 - Medio", window_width / 2 - 100, window_height / 2 + 50, 32, color_medio);
+        d.draw_text("3 - Difícil", window_width / 2 - 100, window_height / 2 + 90, 32, color_dificil);
+
         d.draw_text(
-            "Esteban Cárcamo",
-            window_width - 260,
-            window_height - 40,
-            32,
-            Color::new(255, 215, 0, 255),
+            "Presiona ENTER para comenzar",
+            window_width / 2 - 200,
+            window_height / 2 + 150,
+            28,
+            Color::new(200, 30, 30, 255),
         );
+
+        // Cambia selección con teclas
+        if d.is_key_pressed(KeyboardKey::KEY_ONE) { nivel_seleccionado = 1; }
+        if d.is_key_pressed(KeyboardKey::KEY_TWO) { nivel_seleccionado = 2; }
+        if d.is_key_pressed(KeyboardKey::KEY_THREE) { nivel_seleccionado = 3; }
 
         if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
             break;
         }
     }
+    nivel_seleccionado
 }
 
 pub struct CpuImage {
@@ -411,6 +396,93 @@ fn find_starting_position(maze: &Maze, block_size: usize) -> Vector2 {
     Vector2::new(150.0, 150.0)
 }
 
+fn mostrar_pantalla_inicio(
+    window: &mut RaylibHandle,
+    raylib_thread: &RaylibThread,
+    window_width: i32,
+    window_height: i32,
+) {
+    let fondo = window
+        .load_texture(raylib_thread, "assets/fondo_bienvenida.jpg")
+        .expect("No se pudo cargar el fondo de bienvenida");
+
+    let fondo_width = fondo.width();
+    let fondo_height = fondo.height();
+
+    loop {
+        let mut d = window.begin_drawing(raylib_thread);
+        d.clear_background(Color::BLACK);
+
+        // Dibuja el fondo
+        let scale_x = window_width as f32 / fondo_width as f32;
+        let scale_y = window_height as f32 / fondo_height as f32;
+        let scale = scale_x.max(scale_y);
+
+        d.draw_texture_ex(
+            &fondo,
+            Vector2::new(0.0, 0.0),
+            0.0,
+            scale,
+            Color::WHITE,
+        );
+
+        // Título y datos
+        d.draw_text(
+            "Proyecto Raycaster - Rayo McQueen",
+            window_width / 2 - 450,
+            window_height / 2 - 180,
+            48,
+            Color::new(255, 215, 0, 255),
+        );
+        d.draw_text(
+            "Autor: Esteban Cárcamo",
+            window_width / 2 - 180,
+            window_height / 2 - 120,
+            32,
+            Color::RAYWHITE,
+        );
+        d.draw_text(
+            "Instrucciones:",
+            window_width / 2 - 180,
+            window_height / 2 - 60,
+            32,
+            Color::RAYWHITE,
+        );
+        d.draw_text(
+            "- Usa WASD para moverte",
+            window_width / 2 - 180,
+            window_height / 2 - 20,
+            28,
+            Color::RAYWHITE,
+        );
+        d.draw_text(
+            "- Mouse para mirar",
+            window_width / 2 - 180,
+            window_height / 2 + 10,
+            28,
+            Color::RAYWHITE,
+        );
+        d.draw_text(
+            "- M para cambiar entre 2D/3D",
+            window_width / 2 - 180,
+            window_height / 2 + 40,
+            28,
+            Color::RAYWHITE,
+        );
+        d.draw_text(
+            "Presiona ENTER para seleccionar nivel",
+            window_width / 2 - 220,
+            window_height / 2 + 100,
+            28,
+            Color::new(200, 30, 30, 255),
+        );
+
+        if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
+            break;
+        }
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -423,11 +495,15 @@ fn main() {
         .build();
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
-    framebuffer.set_background_color(Color::new(210, 180, 140, 255)); // Color arena/dorado
+    framebuffer.set_background_color(Color::new(210, 180, 140, 255));
 
-    // let maze = load_maze("maze.txt"); // <-- Comenta o elimina esta línea
-    let mut current_level: u8 = 1; // Empieza en fácil
-    let mut maze = get_maze_for_level(current_level);
+    // Pantalla inicial con instrucciones y datos
+    mostrar_pantalla_inicio(&mut window, &raylib_thread, window_width, window_height);
+
+    // Pantalla de selección de nivel
+    let nivel_inicial = mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
+    let current_level: u8 = nivel_inicial;
+    let maze = get_maze_for_level(current_level);
 
     let mut player = Player {
         pos: find_starting_position(&maze, block_size), // Usa la nueva función
@@ -435,7 +511,6 @@ fn main() {
         fov: PI / 3.0,
     };
 
-    mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
 
     let wall_tex = CpuImage::from_path("assets/texturas/wall.jpg");
     let goal_tex = CpuImage::from_path("assets/texturas/goal.jpg"); 
@@ -465,23 +540,6 @@ fn main() {
         // Cambia el modo solo si se presiona la tecla
         if window.is_key_pressed(KeyboardKey::KEY_M) {
             mode = if mode == "2D" { "3D" } else { "2D" };
-        }
-
-        // Cambia de nivel con teclas (ejemplo: N para siguiente nivel)
-        if window.is_key_pressed(KeyboardKey::KEY_N) {
-            if current_level < 3 {
-                current_level += 1;
-                maze = get_maze_for_level(current_level);
-                // Opcional: reinicia posición del jugador
-                player.pos = find_starting_position(&maze, block_size);
-            }
-        }
-        if window.is_key_pressed(KeyboardKey::KEY_B) {
-            if current_level > 1 {
-                current_level -= 1;
-                maze = get_maze_for_level(current_level);
-                player.pos = find_starting_position(&maze, block_size);
-            }
         }
 
         if mode == "2D" {

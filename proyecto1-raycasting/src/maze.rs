@@ -23,7 +23,7 @@ pub fn generate_random_maze(width: usize, height: usize) -> Vec<Vec<char>> {
 
     for y in 1..height-1 {
         for x in 1..width-1 {
-            maze[y][x] = if rng.gen_bool(0.7) { ' ' } else { '+' };
+            maze[y][x] = if rng.random_bool(0.7) { ' ' } else { '+' };
         }
     }
     maze
