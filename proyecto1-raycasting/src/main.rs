@@ -41,9 +41,24 @@ fn cell_to_color(cell: char) -> Color {
     }
 }
 
-fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char) {
+fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char, goal_tex: Option<&CpuImage>) {
     if cell == ' ' {
         return;
+    }
+    if cell == 'g' {
+        if let Some(tex) = goal_tex {
+            // Dibuja la textura goal.jpg en el bloque
+            for x in 0..block_size {
+                for y in 0..block_size {
+                    let u = x as f32 / block_size as f32;
+                    let v = y as f32 / block_size as f32;
+                    let color = tex.sample(u, v);
+                    framebuffer.set_current_color(color);
+                    framebuffer.set_pixel((xo + x) as u32, (yo + y) as u32);
+                }
+            }
+            return;
+        }
     }
     let color = cell_to_color(cell);
     framebuffer.set_current_color(color);
@@ -55,12 +70,12 @@ fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: us
     }
 }
 
-pub fn render_maze(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize, player: &Player) {
+pub fn render_maze(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize, player: &Player, goal_tex: Option<&CpuImage>) {
     for (row_index, row) in maze.iter().enumerate() {
         for (col_index, &cell) in row.iter().enumerate() {
             let xo = col_index * block_size;
             let yo = row_index * block_size;
-            draw_cell(framebuffer, xo, yo, block_size, cell);
+            draw_cell(framebuffer, xo, yo, block_size, cell, goal_tex);
         }
     }
 
@@ -81,11 +96,10 @@ fn render_world(
     block_size: usize,
     player: &Player,
     wall_tex: &CpuImage,
+    goal_tex: &CpuImage, // <-- Agrega este parámetro
 ) {
     let num_rays = framebuffer.width;
-
-    // let hw = framebuffer.width as f32 / 2.0;   // precalculated half width
-    let hh = framebuffer.height as f32 / 2.0; // precalculated half height
+    let hh = framebuffer.height as f32 / 2.0;
 
     framebuffer.set_current_color(Color::WHITESMOKE);
 
@@ -101,20 +115,26 @@ fn render_world(
         let stake_top = (hh - (stake_height / 2.0)) as usize;
         let stake_bottom = (hh + (stake_height / 2.0)) as usize;
 
-        // Mejor mapeo de textura
         let ray_length = distance_to_wall;
         let hit_x = player.pos.x + ray_length * a.cos();
         let hit_y = player.pos.y + ray_length * a.sin();
 
         let wall_u = match intersect.impact {
-            '|' => (hit_y / block_size as f32).fract(), // pared vertical
-            '-' => (hit_x / block_size as f32).fract(), // pared horizontal
+            '|' => (hit_y / block_size as f32).fract(),
+            '-' => (hit_x / block_size as f32).fract(),
             _   => 0.0,
+        };
+
+        // Selecciona la textura según el tipo de pared
+        let tex = if intersect.impact == 'g' {
+            goal_tex
+        } else {
+            wall_tex
         };
 
         for y in stake_top..stake_bottom {
             let v = (y - stake_top) as f32 / (stake_bottom - stake_top).max(1) as f32;
-            let color = wall_tex.sample(wall_u, v);
+            let color = tex.sample(wall_u, v);
             framebuffer.set_current_color(color);
             framebuffer.set_pixel(i, y as u32);
         }
@@ -132,13 +152,14 @@ pub fn render_minimap(
     player: &Player,
     offset_x: usize,
     offset_y: usize,
+    goal_tex: Option<&CpuImage>,
 ) {
     // Dibuja el laberinto con offset
     for (row_index, row) in maze.iter().enumerate() {
         for (col_index, &cell) in row.iter().enumerate() {
             let xo = offset_x + col_index * block_size;
             let yo = offset_y + row_index * block_size;
-            draw_cell(framebuffer, xo, yo, block_size, cell);
+            draw_cell(framebuffer, xo, yo, block_size, cell, goal_tex);
         }
     }
 
@@ -267,6 +288,15 @@ impl CpuImage {
     }
 }
 
+fn get_maze_for_level(level: u8) -> Maze {
+    match level {
+        1 => generate_maze_with_goal(11, 11), // Fácil
+        2 => generate_maze_with_goal(21, 21), // Medio
+        3 => generate_maze_with_goal(31, 31), // Difícil
+        _ => generate_maze_with_goal(11, 11), // Por defecto fácil
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -282,7 +312,8 @@ fn main() {
     framebuffer.set_background_color(Color::new(50, 50, 100, 255));
 
     // let maze = load_maze("maze.txt"); // <-- Comenta o elimina esta línea
-    let maze = generate_maze_with_goal(21, 21); // tamaño impar recomendado
+    let mut current_level: u8 = 1; // Empieza en fácil
+    let mut maze = get_maze_for_level(current_level);
 
     let mut player = Player {
         pos: Vector2::new(150.0, 150.0),
@@ -293,6 +324,7 @@ fn main() {
     mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
 
     let wall_tex = CpuImage::from_path("assets/texturas/wall.jpg");
+    let goal_tex = CpuImage::from_path("assets/texturas/goal.jpg"); 
 
     let mut mode = "3D"; // Mueve esto fuera del bucle principal
 
@@ -310,10 +342,27 @@ fn main() {
             mode = if mode == "2D" { "3D" } else { "2D" };
         }
 
+        // Cambia de nivel con teclas (ejemplo: N para siguiente nivel)
+        if window.is_key_pressed(KeyboardKey::KEY_N) {
+            if current_level < 3 {
+                current_level += 1;
+                maze = get_maze_for_level(current_level);
+                // Opcional: reinicia posición del jugador
+                player.pos = Vector2::new(150.0, 150.0);
+            }
+        }
+        if window.is_key_pressed(KeyboardKey::KEY_B) {
+            if current_level > 1 {
+                current_level -= 1;
+                maze = get_maze_for_level(current_level);
+                player.pos = Vector2::new(150.0, 150.0);
+            }
+        }
+
         if mode == "2D" {
-            render_maze(&mut framebuffer, &maze, block_size, &player);
+            render_maze(&mut framebuffer, &maze, block_size, &player, Some(&goal_tex));
         } else {
-            render_world(&mut framebuffer, &maze, block_size, &player, &wall_tex);
+            render_world(&mut framebuffer, &maze, block_size, &player, &wall_tex, &goal_tex);
         }
 
         let fps = window.get_fps();
@@ -334,6 +383,7 @@ fn main() {
             &player,
             minimap_offset_x,
             minimap_offset_y,
+            Some(&goal_tex),
         );
         // --- FIN MINIMAPA ---
 
