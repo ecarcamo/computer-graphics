@@ -332,11 +332,10 @@ fn mostrar_pantalla_win(
     raylib_thread: &RaylibThread,
     window_width: i32,
     window_height: i32,
-    win_sfx: &Sound, // <-- Elimina audio
-) {
-    win_sfx.play(); // Reproduce el sonido
+    win_sfx: &Sound,
+) -> bool {
+    win_sfx.play();
 
-    // Carga el fondo de victoria
     let fondo = window
         .load_texture(raylib_thread, "assets/fondo_victoria.jpg")
         .expect("No se pudo cargar el fondo de victoria");
@@ -348,7 +347,6 @@ fn mostrar_pantalla_win(
         let mut d = window.begin_drawing(raylib_thread);
         d.clear_background(Color::BLACK);
 
-        // Dibuja el fondo
         let scale_x = window_width as f32 / fondo_width as f32;
         let scale_y = window_height as f32 / fondo_height as f32;
         let scale = scale_x.max(scale_y);
@@ -361,24 +359,33 @@ fn mostrar_pantalla_win(
             Color::WHITE,
         );
 
-        // Dibuja el texto de victoria
         d.draw_text(
             "¡Felicidades, has ganado!",
             window_width / 2 - 250,
             window_height / 2 - 40,
             40,
-            Color::new(255, 215, 0, 255), // Amarillo dorado
+            Color::new(255, 215, 0, 255),
         );
         d.draw_text(
-            "PRESIONA ESC para salir",
-            window_width / 2 - 200,
+            "PRESIONA ENTER para repetir el nivel",
+            window_width / 2 - 220,
             window_height / 2 + 10,
             30,
             Color::RAYWHITE,
         );
+        d.draw_text(
+            "PRESIONA ESC para salir",
+            window_width / 2 - 200,
+            window_height / 2 + 50,
+            30,
+            Color::RAYWHITE,
+        );
 
+        if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
+            return true; // Volver al menú
+        }
         if d.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
-            break;
+            return false; // Salir
         }
     }
 }
@@ -449,14 +456,14 @@ fn mostrar_pantalla_inicio(
             Color::RAYWHITE,
         );
         d.draw_text(
-            "- Usa WASD para moverte",
+            "- Usa las flechas del teclado para moverte y girar",
             window_width / 2 - 180,
             window_height / 2 - 20,
             28,
             Color::RAYWHITE,
         );
         d.draw_text(
-            "- Mouse para mirar",
+            "- Mouse para mirar horizontalmente",
             window_width / 2 - 180,
             window_height / 2 + 10,
             28,
@@ -587,8 +594,12 @@ fn main() {
 
         // Verifica si el jugador ha alcanzado el objetivo
         if player_reached_goal(&player, &maze, block_size) {
-            mostrar_pantalla_win(&mut window, &raylib_thread, window_width, window_height, &win_sfx);
-            break;
+            if !mostrar_pantalla_win(&mut window, &raylib_thread, window_width, window_height, &win_sfx) {
+                break; // Salir del juego si elige escapar
+            }
+            // Si vuelve al menú, recarga el laberinto y reinicia el jugador
+            let maze = get_maze_for_level(current_level);
+            player.pos = find_starting_position(&maze, block_size);
         }
 
         thread::sleep(Duration::from_millis(16));
