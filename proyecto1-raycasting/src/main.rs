@@ -444,10 +444,16 @@ fn main() {
 
     // Inicializa el dispositivo de audio
     let mut audio = RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
-    // Carga el sonido correctamente usando audio.new_sound
+    let mut bg_music = audio.new_music("assets/sonidos/bg_music_taylor.wav").expect("No se pudo cargar la música de fondo");
+    bg_music.set_volume(1.0);
+    bg_music.play_stream();
+
+    // Sonido de victoria
     let win_sfx = audio.new_sound("assets/sonidos/victoria.wav").expect("No se pudo cargar el sonido de victoria");
 
     while !window.window_should_close() {
+        bg_music.update_stream();
+
         // 1. clear framebuffer
         framebuffer.clear();
 
