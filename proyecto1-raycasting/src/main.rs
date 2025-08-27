@@ -141,8 +141,15 @@ fn render_world(
     }
 }
 
-fn draw_fps(d: &mut RaylibDrawHandle, fps: u32) {
+fn draw_fps(d: &mut RaylibDrawHandle, fps: u32, nivel_texto: &str, window_height: i32) {
     d.draw_text(&format!("FPS: {}", fps), 10, 10, 20, Color::RAYWHITE);
+    d.draw_text(
+        nivel_texto,
+        20,
+        window_height - 40,
+        32,
+        Color::RAYWHITE,
+    );
 }
 
 pub fn render_minimap(
@@ -387,7 +394,20 @@ fn main() {
         );
         // --- FIN MINIMAPA ---
 
-        framebuffer.swap_buffers(&mut window, &raylib_thread, draw_fps, fps);
+        // --- Mostrar nivel actual ---
+        let nivel_texto = match current_level {
+            1 => "Nivel: Fácil",
+            2 => "Nivel: Medio",
+            3 => "Nivel: Difícil",
+            _ => "Nivel: Fácil",
+        };
+
+        framebuffer.swap_buffers(
+            &mut window,
+            &raylib_thread,
+            |d, fps| draw_fps(d, fps, nivel_texto, window_height),
+            fps,
+        );
 
         thread::sleep(Duration::from_millis(16));
     }
