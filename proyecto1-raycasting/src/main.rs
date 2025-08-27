@@ -532,6 +532,7 @@ fn main() {
 
     // Sonido de victoria
     let win_sfx = audio.new_sound("assets/sonidos/victoria.wav").expect("No se pudo cargar el sonido de victoria");
+    let steps_sfx = audio.new_sound("assets/sonidos/steps.wav").expect("No se pudo cargar el sonido de pasos");
 
     while !window.window_should_close() {
         bg_music.update_stream();
@@ -542,7 +543,7 @@ fn main() {
         let delta_time = window.get_frame_time();
 
         // 2. move the player on user input
-        process_events(&mut player, &window, delta_time, &maze, block_size);
+        process_events(&mut player, &window, delta_time, &maze, block_size, &steps_sfx);
 
         // Cambia el modo solo si se presiona la tecla
         if window.is_key_pressed(KeyboardKey::KEY_M) {

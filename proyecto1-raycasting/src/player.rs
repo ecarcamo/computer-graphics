@@ -31,7 +31,9 @@ pub fn process_events(
     delta_time: f32,
     maze: &crate::maze::Maze,
     block_size: usize,
+    steps_sfx: &Sound, 
 ) {
+    steps_sfx.play();
     const MOVE_SPEED: f32 = 200.0;
     const ROTATION_SPEED: f32 = PI;
 
