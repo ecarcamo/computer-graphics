@@ -443,8 +443,8 @@ fn main() {
     let mut mode = "3D"; // Mueve esto fuera del bucle principal
 
     // Inicializa el dispositivo de audio
-    let mut audio = RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
-    let mut bg_music = audio.new_music("assets/sonidos/bg_music_taylor.wav").expect("No se pudo cargar la música de fondo");
+    let audio = RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
+    let bg_music = audio.new_music("assets/sonidos/bg_music_taylor.wav").expect("No se pudo cargar la música de fondo");
     bg_music.set_volume(1.0);
     bg_music.play_stream();
 
