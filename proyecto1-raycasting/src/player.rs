@@ -35,6 +35,7 @@ pub fn process_events(
     const MOVE_SPEED: f32 = 200.0;
     const ROTATION_SPEED: f32 = PI;
 
+    // Rotación con teclado
     if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
         player.a += ROTATION_SPEED * delta_time;
     }
@@ -42,9 +43,14 @@ pub fn process_events(
         player.a -= ROTATION_SPEED * delta_time;
     }
 
+    // Rotación con mouse (horizontal)
+    let mouse_delta = rl.get_mouse_delta().x;
+    player.a += mouse_delta * 0.01; // Ajusta el factor para sensibilidad
+
     let mut new_x = player.pos.x;
     let mut new_y = player.pos.y;
 
+    // Movimiento con teclado
     if rl.is_key_down(KeyboardKey::KEY_DOWN) {
         new_x -= MOVE_SPEED * player.a.cos() * delta_time;
         new_y -= MOVE_SPEED * player.a.sin() * delta_time;
@@ -54,6 +60,7 @@ pub fn process_events(
         new_y += MOVE_SPEED * player.a.sin() * delta_time;
     }
 
+    // Validación de movimiento
     if is_position_valid(new_x, player.pos.y, maze, block_size) {
         player.pos.x = new_x;
     }
