@@ -97,10 +97,23 @@ fn render_world(
     block_size: usize,
     player: &Player,
     wall_tex: &CpuImage,
-    goal_tex: &CpuImage, // <-- Agrega este parámetro
+    goal_tex: &CpuImage,
 ) {
     let num_rays = framebuffer.width;
     let hh = framebuffer.height as f32 / 2.0;
+
+    // --- Fondo cielo y piso ---
+    let color_cielo = Color::new(180, 210, 255, 255); // azul claro
+    let color_piso  = Color::new(210, 180, 140, 255); // arena/dorado
+
+    for y in 0..framebuffer.height {
+        let fondo_color = if (y as f32) < hh { color_cielo } else { color_piso };
+        for x in 0..framebuffer.width {
+            framebuffer.set_current_color(fondo_color);
+            framebuffer.set_pixel(x, y);
+        }
+    }
+    // --- Fin fondo cielo y piso ---
 
     framebuffer.set_current_color(Color::WHITESMOKE);
 
@@ -410,7 +423,7 @@ fn main() {
         .build();
 
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
-    framebuffer.set_background_color(Color::new(50, 50, 100, 255));
+    framebuffer.set_background_color(Color::new(210, 180, 140, 255)); // Color arena/dorado
 
     // let maze = load_maze("maze.txt"); // <-- Comenta o elimina esta línea
     let mut current_level: u8 = 1; // Empieza en fácil
