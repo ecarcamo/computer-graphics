@@ -11,13 +11,15 @@ mod player;
 use caster::{Intersect, cast_ray};
 use framebuffer::Framebuffer;
 use line::line;
-use maze::{Maze, load_maze};
+use maze::{generate_maze_with_goal}; // importa la nueva función
 use player::{Player, process_events};
 
 use raylib::prelude::*;
 use std::f32::consts::PI;
 use std::thread;
 use std::time::Duration;
+
+use crate::maze::Maze;
 
 fn cell_to_color(cell: char) -> Color {
     match cell {
@@ -279,7 +281,9 @@ fn main() {
     let mut framebuffer = Framebuffer::new(window_width as u32, window_height as u32);
     framebuffer.set_background_color(Color::new(50, 50, 100, 255));
 
-    let maze = load_maze("maze.txt");
+    // let maze = load_maze("maze.txt"); // <-- Comenta o elimina esta línea
+    let maze = generate_maze_with_goal(21, 21); // tamaño impar recomendado
+
     let mut player = Player {
         pos: Vector2::new(150.0, 150.0),
         a: PI / 3.0,
@@ -318,7 +322,7 @@ fn main() {
         // 3. draw stuff
 
         // --- MINIMAPA ---
-        let minimap_block_size: usize = 20;
+        let minimap_block_size: usize = 12; // <-- tamaño reducido
         let minimap_offset_x: usize = (window_width as usize)
             .saturating_sub(maze[0].len() * minimap_block_size)
             .saturating_sub(20);
