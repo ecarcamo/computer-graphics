@@ -73,7 +73,13 @@ pub fn render_maze(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize
     }
 }
 
-fn render_world(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize, player: &Player) {
+fn render_world(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    block_size: usize,
+    player: &Player,
+    wall_tex: &CpuImage,
+) {
     let num_rays = framebuffer.width;
 
     // let hw = framebuffer.width as f32 / 2.0;   // precalculated half width
@@ -82,23 +88,33 @@ fn render_world(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize, p
     framebuffer.set_current_color(Color::WHITESMOKE);
 
     for i in 0..num_rays {
-        let current_ray = i as f32 / num_rays as f32; // current ray divided by total rays
+        let current_ray = i as f32 / num_rays as f32;
         let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
         let intersect = cast_ray(framebuffer, &maze, &player, a, block_size, false);
 
-        // Calculate the height of the stake
-        let distance_to_wall = intersect.distance; // how far is this wall from the player
-        let distance_to_projection_plane = 70.0; // how far is the "player" from the "camera"
-        // this ratio doesn't really matter as long as it is a function of distance
+        let distance_to_wall = intersect.distance.max(0.0001);
+        let distance_to_projection_plane = 70.0;
         let stake_height = (hh / distance_to_wall) * distance_to_projection_plane;
 
-        // Calculate the position to draw the stake
         let stake_top = (hh - (stake_height / 2.0)) as usize;
         let stake_bottom = (hh + (stake_height / 2.0)) as usize;
 
-        // Draw the stake directly in the framebuffer
+        // Mejor mapeo de textura
+        let ray_length = distance_to_wall;
+        let hit_x = player.pos.x + ray_length * a.cos();
+        let hit_y = player.pos.y + ray_length * a.sin();
+
+        let wall_u = match intersect.impact {
+            '|' => (hit_y / block_size as f32).fract(), // pared vertical
+            '-' => (hit_x / block_size as f32).fract(), // pared horizontal
+            _   => 0.0,
+        };
+
         for y in stake_top..stake_bottom {
-            framebuffer.set_pixel(i, y as u32); // Assuming white color for the stake
+            let v = (y - stake_top) as f32 / (stake_bottom - stake_top).max(1) as f32;
+            let color = wall_tex.sample(wall_u, v);
+            framebuffer.set_current_color(color);
+            framebuffer.set_pixel(i, y as u32);
         }
     }
 }
@@ -227,6 +243,28 @@ fn mostrar_pantalla_bienvenida(
     }
 }
 
+pub struct CpuImage {
+    pub w: usize,
+    pub h: usize,
+    pub pixels: Vec<Color>,
+}
+
+impl CpuImage {
+    pub fn from_path(path: &str) -> Self {
+        let img = Image::load_image(path).expect("No se pudo cargar la imagen");
+        let w = img.width as usize;
+        let h = img.height as usize;
+        let pixels = img.get_image_data().to_vec();
+        Self { w, h, pixels }
+    }
+
+    pub fn sample(&self, u: f32, v: f32) -> Color {
+        let x = ((u.clamp(0.0, 1.0)) * (self.w as f32 - 1.0)) as usize;
+        let y = ((v.clamp(0.0, 1.0)) * (self.h as f32 - 1.0)) as usize;
+        self.pixels[y * self.w + x]
+    }
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -250,6 +288,10 @@ fn main() {
 
     mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
 
+    let wall_tex = CpuImage::from_path("assets/texturas/wall.jpg");
+
+    let mut mode = "3D"; // Mueve esto fuera del bucle principal
+
     while !window.window_should_close() {
         // 1. clear framebuffer
         framebuffer.clear();
@@ -259,17 +301,15 @@ fn main() {
         // 2. move the player on user input
         process_events(&mut player, &window, delta_time, &maze, block_size);
 
-        let mut mode = "3D";
-
-        if window.is_key_down(KeyboardKey::KEY_M) {
+        // Cambia el modo solo si se presiona la tecla
+        if window.is_key_pressed(KeyboardKey::KEY_M) {
             mode = if mode == "2D" { "3D" } else { "2D" };
         }
-
 
         if mode == "2D" {
             render_maze(&mut framebuffer, &maze, block_size, &player);
         } else {
-            render_world(&mut framebuffer, &maze, block_size, &player);
+            render_world(&mut framebuffer, &maze, block_size, &player, &wall_tex);
         }
 
         let fps = window.get_fps();
