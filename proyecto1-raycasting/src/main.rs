@@ -11,7 +11,7 @@ mod player;
 use caster::{Intersect, cast_ray};
 use framebuffer::Framebuffer;
 use line::line;
-use maze::{generate_maze_with_goal}; // importa la nueva función
+use maze::generate_maze_with_goal; // importa la nueva función
 use player::{Player, process_events};
 
 use raylib::audio::{RaylibAudio, Sound};
@@ -42,7 +42,14 @@ fn cell_to_color(cell: char) -> Color {
     }
 }
 
-fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: usize, cell: char, goal_tex: Option<&CpuImage>) {
+fn draw_cell(
+    framebuffer: &mut Framebuffer,
+    xo: usize,
+    yo: usize,
+    block_size: usize,
+    cell: char,
+    goal_tex: Option<&CpuImage>,
+) {
     if cell == ' ' {
         return;
     }
@@ -71,7 +78,13 @@ fn draw_cell(framebuffer: &mut Framebuffer, xo: usize, yo: usize, block_size: us
     }
 }
 
-pub fn render_maze(framebuffer: &mut Framebuffer, maze: &Maze, block_size: usize, player: &Player, goal_tex: Option<&CpuImage>) {
+pub fn render_maze(
+    framebuffer: &mut Framebuffer,
+    maze: &Maze,
+    block_size: usize,
+    player: &Player,
+    goal_tex: Option<&CpuImage>,
+) {
     for (row_index, row) in maze.iter().enumerate() {
         for (col_index, &cell) in row.iter().enumerate() {
             let xo = col_index * block_size;
@@ -104,10 +117,14 @@ fn render_world(
 
     // --- Fondo cielo y piso ---
     let color_cielo = Color::new(180, 210, 255, 255); // azul claro
-    let color_piso  = Color::new(210, 180, 140, 255); // arena/dorado
+    let color_piso = Color::new(210, 180, 140, 255); // arena/dorado
 
     for y in 0..framebuffer.height {
-        let fondo_color = if (y as f32) < hh { color_cielo } else { color_piso };
+        let fondo_color = if (y as f32) < hh {
+            color_cielo
+        } else {
+            color_piso
+        };
         for x in 0..framebuffer.width {
             framebuffer.set_current_color(fondo_color);
             framebuffer.set_pixel(x, y);
@@ -136,7 +153,7 @@ fn render_world(
         let wall_u = match intersect.impact {
             '|' => (hit_y / block_size as f32).fract(),
             '-' => (hit_x / block_size as f32).fract(),
-            _   => 0.0,
+            _ => 0.0,
         };
 
         // Selecciona la textura según el tipo de pared
@@ -157,13 +174,7 @@ fn render_world(
 
 fn draw_fps(d: &mut RaylibDrawHandle, fps: u32, nivel_texto: &str, window_height: i32) {
     d.draw_text(&format!("FPS: {}", fps), 10, 10, 20, Color::RAYWHITE);
-    d.draw_text(
-        nivel_texto,
-        20,
-        window_height - 40,
-        32,
-        Color::RAYWHITE,
-    );
+    d.draw_text(nivel_texto, 20, window_height - 40, 32, Color::RAYWHITE);
 }
 
 pub fn render_minimap(
@@ -219,13 +230,7 @@ fn mostrar_pantalla_bienvenida(
         let scale_y = window_height as f32 / fondo_height as f32;
         let scale = scale_x.max(scale_y);
 
-        d.draw_texture_ex(
-            &fondo,
-            Vector2::new(0.0, 0.0),
-            0.0,
-            scale,
-            Color::WHITE,
-        );
+        d.draw_texture_ex(&fondo, Vector2::new(0.0, 0.0), 0.0, scale, Color::WHITE);
 
         // Título y texto
         d.draw_text(
@@ -244,13 +249,43 @@ fn mostrar_pantalla_bienvenida(
         );
 
         // Opciones de nivel
-        let color_facil = if nivel_seleccionado == 1 { Color::YELLOW } else { Color::RAYWHITE };
-        let color_medio = if nivel_seleccionado == 2 { Color::YELLOW } else { Color::RAYWHITE };
-        let color_dificil = if nivel_seleccionado == 3 { Color::YELLOW } else { Color::RAYWHITE };
+        let color_facil = if nivel_seleccionado == 1 {
+            Color::YELLOW
+        } else {
+            Color::RAYWHITE
+        };
+        let color_medio = if nivel_seleccionado == 2 {
+            Color::YELLOW
+        } else {
+            Color::RAYWHITE
+        };
+        let color_dificil = if nivel_seleccionado == 3 {
+            Color::YELLOW
+        } else {
+            Color::RAYWHITE
+        };
 
-        d.draw_text("1 - Fácil", window_width / 2 - 100, window_height / 2 + 10, 32, color_facil);
-        d.draw_text("2 - Medio", window_width / 2 - 100, window_height / 2 + 50, 32, color_medio);
-        d.draw_text("3 - Difícil", window_width / 2 - 100, window_height / 2 + 90, 32, color_dificil);
+        d.draw_text(
+            "1 - Fácil",
+            window_width / 2 - 100,
+            window_height / 2 + 10,
+            32,
+            color_facil,
+        );
+        d.draw_text(
+            "2 - Medio",
+            window_width / 2 - 100,
+            window_height / 2 + 50,
+            32,
+            color_medio,
+        );
+        d.draw_text(
+            "3 - Difícil",
+            window_width / 2 - 100,
+            window_height / 2 + 90,
+            32,
+            color_dificil,
+        );
 
         d.draw_text(
             "Presiona ENTER para comenzar",
@@ -261,9 +296,15 @@ fn mostrar_pantalla_bienvenida(
         );
 
         // Cambia selección con teclas
-        if d.is_key_pressed(KeyboardKey::KEY_ONE) { nivel_seleccionado = 1; }
-        if d.is_key_pressed(KeyboardKey::KEY_TWO) { nivel_seleccionado = 2; }
-        if d.is_key_pressed(KeyboardKey::KEY_THREE) { nivel_seleccionado = 3; }
+        if d.is_key_pressed(KeyboardKey::KEY_ONE) {
+            nivel_seleccionado = 1;
+        }
+        if d.is_key_pressed(KeyboardKey::KEY_TWO) {
+            nivel_seleccionado = 2;
+        }
+        if d.is_key_pressed(KeyboardKey::KEY_THREE) {
+            nivel_seleccionado = 3;
+        }
 
         if d.is_key_pressed(KeyboardKey::KEY_ENTER) {
             break;
@@ -313,7 +354,9 @@ fn player_reached_goal(player: &Player, maze: &Maze, block_size: usize) -> bool 
                 break;
             }
         }
-        if goal_pos.is_some() { break; }
+        if goal_pos.is_some() {
+            break;
+        }
     }
     if let Some((goal_i, goal_j)) = goal_pos {
         let goal_x = goal_i as f32 * block_size as f32 + block_size as f32 / 2.0;
@@ -351,13 +394,7 @@ fn mostrar_pantalla_win(
         let scale_y = window_height as f32 / fondo_height as f32;
         let scale = scale_x.max(scale_y);
 
-        d.draw_texture_ex(
-            &fondo,
-            Vector2::new(0.0, 0.0),
-            0.0,
-            scale,
-            Color::WHITE,
-        );
+        d.draw_texture_ex(&fondo, Vector2::new(0.0, 0.0), 0.0, scale, Color::WHITE);
 
         d.draw_text(
             "¡Felicidades, has ganado!",
@@ -394,8 +431,10 @@ fn find_starting_position(maze: &Maze, block_size: usize) -> Vector2 {
     for (j, row) in maze.iter().enumerate() {
         for (i, &cell) in row.iter().enumerate() {
             if cell == ' ' {
-                return Vector2::new(i as f32 * block_size as f32 + block_size as f32 / 2.0,
-                                    j as f32 * block_size as f32 + block_size as f32 / 2.0);
+                return Vector2::new(
+                    i as f32 * block_size as f32 + block_size as f32 / 2.0,
+                    j as f32 * block_size as f32 + block_size as f32 / 2.0,
+                );
             }
         }
     }
@@ -425,13 +464,7 @@ fn mostrar_pantalla_inicio(
         let scale_y = window_height as f32 / fondo_height as f32;
         let scale = scale_x.max(scale_y);
 
-        d.draw_texture_ex(
-            &fondo,
-            Vector2::new(0.0, 0.0),
-            0.0,
-            scale,
-            Color::WHITE,
-        );
+        d.draw_texture_ex(&fondo, Vector2::new(0.0, 0.0), 0.0, scale, Color::WHITE);
 
         // Título y datos
         d.draw_text(
@@ -508,7 +541,8 @@ fn main() {
     mostrar_pantalla_inicio(&mut window, &raylib_thread, window_width, window_height);
 
     // Pantalla de selección de nivel
-    let nivel_inicial = mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
+    let nivel_inicial =
+        mostrar_pantalla_bienvenida(&mut window, &raylib_thread, window_width, window_height);
     let current_level: u8 = nivel_inicial;
     let maze = get_maze_for_level(current_level);
 
@@ -518,21 +552,27 @@ fn main() {
         fov: PI / 3.0,
     };
 
-
     let wall_tex = CpuImage::from_path("assets/texturas/wall.jpg");
-    let goal_tex = CpuImage::from_path("assets/texturas/goal.jpg"); 
+    let goal_tex = CpuImage::from_path("assets/texturas/goal.jpg");
 
     let mut mode = "3D"; // Mueve esto fuera del bucle principal
 
     // Inicializa el dispositivo de audio
-    let audio = RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
-    let bg_music = audio.new_music("assets/sonidos/bg_music_taylor.wav").expect("No se pudo cargar la música de fondo");
+    let audio =
+        RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
+    let bg_music = audio
+        .new_music("assets/sonidos/bg_music_taylor.wav")
+        .expect("No se pudo cargar la música de fondo");
     bg_music.set_volume(1.0);
     bg_music.play_stream();
 
     // Sonido de victoria
-    let win_sfx = audio.new_sound("assets/sonidos/victoria.wav").expect("No se pudo cargar el sonido de victoria");
-    let steps_sfx = audio.new_sound("assets/sonidos/steps.wav").expect("No se pudo cargar el sonido de pasos");
+    let win_sfx = audio
+        .new_sound("assets/sonidos/victoria.wav")
+        .expect("No se pudo cargar el sonido de victoria");
+    let steps_sfx = audio
+        .new_sound("assets/sonidos/steps.wav")
+        .expect("No se pudo cargar el sonido de pasos");
 
     while !window.window_should_close() {
         bg_music.update_stream();
@@ -543,7 +583,14 @@ fn main() {
         let delta_time = window.get_frame_time();
 
         // 2. move the player on user input
-        process_events(&mut player, &window, delta_time, &maze, block_size, &steps_sfx);
+        process_events(
+            &mut player,
+            &window,
+            delta_time,
+            &maze,
+            block_size,
+            &steps_sfx,
+        );
 
         // Cambia el modo solo si se presiona la tecla
         if window.is_key_pressed(KeyboardKey::KEY_M) {
@@ -551,13 +598,25 @@ fn main() {
         }
 
         if mode == "2D" {
-            render_maze(&mut framebuffer, &maze, block_size, &player, Some(&goal_tex));
+            render_maze(
+                &mut framebuffer,
+                &maze,
+                block_size,
+                &player,
+                Some(&goal_tex),
+            );
         } else {
-            render_world(&mut framebuffer, &maze, block_size, &player, &wall_tex, &goal_tex);
+            render_world(
+                &mut framebuffer,
+                &maze,
+                block_size,
+                &player,
+                &wall_tex,
+                &goal_tex,
+            );
         }
 
         let fps = window.get_fps();
-
 
         // 3. draw stuff
 
@@ -595,7 +654,13 @@ fn main() {
 
         // Verifica si el jugador ha alcanzado el objetivo
         if player_reached_goal(&player, &maze, block_size) {
-            if !mostrar_pantalla_win(&mut window, &raylib_thread, window_width, window_height, &win_sfx) {
+            if !mostrar_pantalla_win(
+                &mut window,
+                &raylib_thread,
+                window_width,
+                window_height,
+                &win_sfx,
+            ) {
                 break; // Salir del juego si elige escapar
             }
             // Si vuelve al menú, recarga el laberinto y reinicia el jugador
