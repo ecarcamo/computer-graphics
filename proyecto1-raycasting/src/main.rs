@@ -14,6 +14,7 @@ use line::line;
 use maze::{generate_maze_with_goal}; // importa la nueva función
 use player::{Player, process_events};
 
+use raylib::audio::{RaylibAudio, Sound};
 use raylib::prelude::*;
 use std::f32::consts::PI;
 use std::thread;
@@ -304,6 +305,99 @@ fn get_maze_for_level(level: u8) -> Maze {
     }
 }
 
+fn player_reached_goal(player: &Player, maze: &Maze, block_size: usize) -> bool {
+    // Busca la posición de la meta
+    let mut goal_pos = None;
+    for (j, row) in maze.iter().enumerate() {
+        for (i, &cell) in row.iter().enumerate() {
+            if cell == 'g' {
+                goal_pos = Some((i, j));
+                break;
+            }
+        }
+        if goal_pos.is_some() { break; }
+    }
+    if let Some((goal_i, goal_j)) = goal_pos {
+        let goal_x = goal_i as f32 * block_size as f32 + block_size as f32 / 2.0;
+        let goal_y = goal_j as f32 * block_size as f32 + block_size as f32 / 2.0;
+        let dx = player.pos.x - goal_x;
+        let dy = player.pos.y - goal_y;
+        let distancia = (dx * dx + dy * dy).sqrt();
+        // Cambia el rango aquí, por ejemplo, al tamaño completo del bloque
+        return distancia < block_size as f32;
+    }
+    false
+}
+
+fn mostrar_pantalla_win(
+    window: &mut RaylibHandle,
+    raylib_thread: &RaylibThread,
+    window_width: i32,
+    window_height: i32,
+    win_sfx: &Sound, // <-- Elimina audio
+) {
+    win_sfx.play(); // Reproduce el sonido
+
+    // Carga el fondo de victoria
+    let fondo = window
+        .load_texture(raylib_thread, "assets/fondo_victoria.jpg")
+        .expect("No se pudo cargar el fondo de victoria");
+
+    let fondo_width = fondo.width();
+    let fondo_height = fondo.height();
+
+    loop {
+        let mut d = window.begin_drawing(raylib_thread);
+        d.clear_background(Color::BLACK);
+
+        // Dibuja el fondo
+        let scale_x = window_width as f32 / fondo_width as f32;
+        let scale_y = window_height as f32 / fondo_height as f32;
+        let scale = scale_x.max(scale_y);
+
+        d.draw_texture_ex(
+            &fondo,
+            Vector2::new(0.0, 0.0),
+            0.0,
+            scale,
+            Color::WHITE,
+        );
+
+        // Dibuja el texto de victoria
+        d.draw_text(
+            "¡Felicidades, has ganado!",
+            window_width / 2 - 250,
+            window_height / 2 - 40,
+            40,
+            Color::new(255, 215, 0, 255), // Amarillo dorado
+        );
+        d.draw_text(
+            "PRESIONA ESC para salir",
+            window_width / 2 - 200,
+            window_height / 2 + 10,
+            30,
+            Color::RAYWHITE,
+        );
+
+        if d.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
+            break;
+        }
+    }
+}
+
+fn find_starting_position(maze: &Maze, block_size: usize) -> Vector2 {
+    for (j, row) in maze.iter().enumerate() {
+        for (i, &cell) in row.iter().enumerate() {
+            if cell == ' ' {
+                return Vector2::new(i as f32 * block_size as f32 + block_size as f32 / 2.0,
+                                    j as f32 * block_size as f32 + block_size as f32 / 2.0);
+            }
+        }
+    }
+    // Si no encuentra, usa el centro
+    Vector2::new(150.0, 150.0)
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -323,7 +417,7 @@ fn main() {
     let mut maze = get_maze_for_level(current_level);
 
     let mut player = Player {
-        pos: Vector2::new(150.0, 150.0),
+        pos: find_starting_position(&maze, block_size), // Usa la nueva función
         a: PI / 3.0,
         fov: PI / 3.0,
     };
@@ -334,6 +428,11 @@ fn main() {
     let goal_tex = CpuImage::from_path("assets/texturas/goal.jpg"); 
 
     let mut mode = "3D"; // Mueve esto fuera del bucle principal
+
+    // Inicializa el dispositivo de audio
+    let mut audio = RaylibAudio::init_audio_device().expect("No se pudo inicializar el dispositivo de audio");
+    // Carga el sonido correctamente usando audio.new_sound
+    let win_sfx = audio.new_sound("assets/sonidos/victoria.wav").expect("No se pudo cargar el sonido de victoria");
 
     while !window.window_should_close() {
         // 1. clear framebuffer
@@ -355,14 +454,14 @@ fn main() {
                 current_level += 1;
                 maze = get_maze_for_level(current_level);
                 // Opcional: reinicia posición del jugador
-                player.pos = Vector2::new(150.0, 150.0);
+                player.pos = find_starting_position(&maze, block_size);
             }
         }
         if window.is_key_pressed(KeyboardKey::KEY_B) {
             if current_level > 1 {
                 current_level -= 1;
                 maze = get_maze_for_level(current_level);
-                player.pos = Vector2::new(150.0, 150.0);
+                player.pos = find_starting_position(&maze, block_size);
             }
         }
 
@@ -408,6 +507,12 @@ fn main() {
             |d, fps| draw_fps(d, fps, nivel_texto, window_height),
             fps,
         );
+
+        // Verifica si el jugador ha alcanzado el objetivo
+        if player_reached_goal(&player, &maze, block_size) {
+            mostrar_pantalla_win(&mut window, &raylib_thread, window_width, window_height, &win_sfx);
+            break;
+        }
 
         thread::sleep(Duration::from_millis(16));
     }
