@@ -3,14 +3,18 @@ use raylib::prelude::*;
 pub struct Framebuffer {
     image: Image,
     background_color: Color,
-    current_color:    Color,
+    current_color: Color,
 }
 
 impl Framebuffer {
     pub fn new(width: i32, height: i32) -> Self {
         let bg = Color::BLACK;
         let img = Image::gen_image_color(width, height, bg);
-        Framebuffer { image: img, background_color: bg, current_color: Color::WHITE }
+        Framebuffer {
+            image: img,
+            background_color: bg,
+            current_color: Color::WHITE,
+        }
     }
 
     pub fn set_background_color(&mut self, color: Color) {

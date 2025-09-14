@@ -1,11 +1,8 @@
-use raylib::prelude::*;
 use crate::framebuffer::Framebuffer;
+use raylib::prelude::*;
 
 /// Rellena un polígono simple (no necesariamente convexo) cerrado con scanline fill
-pub fn fill_polygon(
-    fb: &mut Framebuffer,
-    vertices: &[Vector2],
-) {
+pub fn fill_polygon(fb: &mut Framebuffer, vertices: &[Vector2]) {
     let mut y_min = vertices[0].y as i32;
     let mut y_max = y_min;
     for v in vertices.iter() {
