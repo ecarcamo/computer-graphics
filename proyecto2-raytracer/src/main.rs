@@ -5,7 +5,8 @@ mod plane; // Nuevo módulo
 mod ray;
 mod renderer;
 mod shading;
-mod vec3; // Nuevo módulo para el trait
+mod textured_aabb;
+mod vec3; // Nuevo módulo para el trait // nuevo
 
 use camera::Camera;
 use raylib::prelude::*;
@@ -13,9 +14,23 @@ use renderer::render;
 use std::f32::consts::PI;
 use vec3::Vec3;
 
+// Añadir: cargar textura usando crate image
+fn try_load_texture(path: &str) -> Option<(Vec<u8>, u32, u32)> {
+    if let Ok(img) = image::open(path) {
+        let rgba = img.to_rgba8();
+        let (w, h) = rgba.dimensions();
+        Some((rgba.into_raw(), w, h))
+    } else {
+        None
+    }
+}
+
 fn main() {
     // Tamaño del framebuffer (y ventana)
     let (fb_w, fb_h) = (800, 600);
+    // Cargar textura (si existe)
+    let tex = try_load_texture("assets/diamante.jpg");
+    // tex ahora es Option<(Vec<u8>, w, h)>
 
     // Inicializar raylib
     let (mut rl, thread) = raylib::init()
@@ -25,7 +40,7 @@ fn main() {
 
     // Texture2D inicial (vacía)
     let img = Image::gen_image_color(fb_w, fb_h, Color::BLACK);
-    let mut tex = rl.load_texture_from_image(&thread, &img).expect("texture");
+    let mut tex2d = rl.load_texture_from_image(&thread, &img).expect("texture");
 
     // Parámetros de cámara orbital
     let mut yaw: f32 = 0.6;
@@ -86,14 +101,17 @@ fn main() {
             fov_y: 60.0,
         };
 
+        // Preparar parámetro de textura para render
+        let textured_param = tex.as_ref().map(|(buf, w, h)| (buf.as_slice(), *w, *h));
+
         // Render CPU -> framebuffer
-        render(&mut frame, fb_w, fb_h, &cam, light_pos);
+        render(&mut frame, fb_w, fb_h, &cam, light_pos, textured_param);
 
         // Subir framebuffer a la textura y dibujar
-        tex.update_texture(&frame);
+        tex2d.update_texture(&frame);
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::BLACK);
-        d.draw_texture(&tex, 0, 0, Color::WHITE);
+        d.draw_texture(&tex2d, 0, 0, Color::WHITE);
         d.draw_text(
             "Flechas: orbitar | Q/E: zoom | WASD: luz",
             12,
