@@ -1,5 +1,5 @@
-use crate::vec3::Vec3;
 use crate::ray::Ray;
+use crate::vec3::Vec3;
 
 // Trait para cualquier objeto que pueda ser intersectado por un rayo
 pub trait Intersectable {
