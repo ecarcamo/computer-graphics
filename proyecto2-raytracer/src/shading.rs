@@ -1,60 +1,79 @@
-use crate::aabb::Aabb;
-use crate::object::Intersectable;
-use crate::ray::Ray;
-use crate::vec3::Vec3; // Añadir esta línea
-
-pub fn sky(dir: Vec3) -> Vec3 {
-    let t = 0.5 * (dir.y + 1.0);
-    Vec3::new(0.2, 0.6, 0.35)
-        .mul(1.0 - t)
-        .add(Vec3::new(0.9, 0.9, 0.2).mul(t))
-}
-
-pub fn lambert(normal: Vec3, pos: Vec3, light_pos: Vec3, albedo: Vec3, in_shadow: bool) -> Vec3 {
-    // Si está en sombra, devuelve solo iluminación ambiente
-    if in_shadow {
-        // Factor de luz ambiente (ajusta según necesites)
-        let ambient = 0.1;
-        return albedo.mul(ambient);
-    }
-
-    // Cálculo normal de iluminación difusa
-    let l = light_pos.sub(pos).norm();
-    let ndotl = normal.norm().dot(l).max(0.0);
-    albedo.mul(ndotl)
-}
-
-pub fn is_shadowed(pos: Vec3, light_pos: Vec3, normal: Vec3, cube: &Aabb) -> bool {
-    // Vector dirección desde el punto hacia la luz
-    let light_dir = light_pos.sub(pos).norm();
-
-    // Desplazar ligeramente el origen para evitar auto-intersección
-    let shadow_bias = 1e-3;
-    let shadow_origin = pos.add(normal.mul(shadow_bias));
-
-    // Crear un rayo de sombra hacia la luz
-    let shadow_ray = Ray {
-        orig: shadow_origin,
-        dir: light_dir,
-    };
-
-    // Calcular la distancia al punto de luz
-    let light_distance = light_pos.sub(pos).len();
-
-    // Si hay una intersección entre el punto y la luz, entonces está en sombra
-    if let Some(t) = cube.intersect(&shadow_ray) {
-        return t < light_distance;
-    }
-
-    false
-}
+use crate::vec3::Vec3;
 
 pub fn to_rgba(c: Vec3) -> [u8; 4] {
     let g = c.clamp01();
-    [
-        (g.x * 255.0) as u8,
-        (g.y * 255.0) as u8,
-        (g.z * 255.0) as u8,
-        255,
-    ]
+    [(g.x * 255.0) as u8, (g.y * 255.0) as u8, (g.z * 255.0) as u8, 255]
+}
+
+// Cielo procedural (fallback si no hay skybox)
+pub fn sky(dir: Vec3) -> Vec3 {
+    let t = 0.5 * (dir.y + 1.0);
+    Vec3::new(0.2, 0.6, 0.35).mul(1.0 - t).add(Vec3::new(0.9, 0.9, 0.2).mul(t))
+}
+
+// Reflexión especular
+pub fn reflect(i: Vec3, n: Vec3) -> Vec3 {
+    i.sub(n.mul(2.0 * i.dot(n))).norm()
+}
+
+// Refracción por Snell. Devuelve None si hay RTI.
+pub fn refract(i: Vec3, n: Vec3, eta: f32) -> Option<Vec3> {
+    let cosi = (-i).dot(n).clamp(-1.0, 1.0);
+    let sin2_t = eta * eta * (1.0 - cosi * cosi);
+    if sin2_t > 1.0 { return None; }
+    let cost = (1.0 - sin2_t).sqrt();
+    Some(i.mul(eta).add(n.mul(eta * cosi - cost)).norm())
+}
+
+// Especular Phong
+pub fn specular_phong(r: Vec3, v: Vec3, k_s: f32, shininess: f32) -> f32 {
+    let rv = r.dot(v).max(0.0);
+    k_s * rv.powf(shininess.max(1.0))
+}
+
+#[derive(Copy, Clone)]
+pub struct Tex<'a> { pub pix: &'a [u8], pub w: u32, pub h: u32 }
+
+#[derive(Copy, Clone)]
+pub struct Skybox<'a> {
+    pub px: Tex<'a>, pub nx: Tex<'a>,
+    pub py: Tex<'a>, pub ny: Tex<'a>,
+    pub pz: Tex<'a>, pub nz: Tex<'a>,
+}
+
+// Muestrea el cubemap
+pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
+    let d = dir.norm();
+    let ax = d.x.abs(); let ay = d.y.abs(); let az = d.z.abs();
+    let (face, u, v) = if ax >= ay && ax >= az {
+        if d.x > 0.0 { ("px", -d.z/ax,  d.y/ax) } else { ("nx",  d.z/ax,  d.y/ax) }
+    } else if ay >= ax && ay >= az {
+        if d.y > 0.0 { ("py",  d.x/ay, -d.z/ay) } else { ("ny",  d.x/ay,  d.z/ay) }
+    } else {
+        if d.z > 0.0 { ("pz",  d.x/az,  d.y/az) } else { ("nz", -d.x/az,  d.y/az) }
+    };
+    let uu = (u + 1.0) * 0.5;
+    let vv = (v + 1.0) * 0.5;
+
+    let sample = |t: &Tex, u: f32, v: f32| -> Vec3 {
+        let uu = u.clamp(0.0, 1.0);
+        let vv = v.clamp(0.0, 1.0);
+        let px = (uu * (t.w as f32 - 1.0)).round() as u32;
+        let py = ((1.0 - vv) * (t.h as f32 - 1.0)).round() as u32;
+        let idx = ((py * t.w + px) * 4) as usize;
+        if idx + 3 >= t.pix.len() { return Vec3::new(0.5,0.7,1.0); }
+        let r = t.pix[idx] as f32 / 255.0;
+        let g = t.pix[idx + 1] as f32 / 255.0;
+        let b = t.pix[idx + 2] as f32 / 255.0;
+        Vec3::new(r,g,b)
+    };
+
+    match face {
+        "px" => sample(&sb.px, uu, vv),
+        "nx" => sample(&sb.nx, uu, vv),
+        "py" => sample(&sb.py, uu, vv),
+        "ny" => sample(&sb.ny, uu, vv),
+        "pz" => sample(&sb.pz, uu, vv),
+        _    => sample(&sb.nz, uu, vv),
+    }
 }
