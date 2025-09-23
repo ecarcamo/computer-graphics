@@ -9,7 +9,7 @@ mod vec3;
 
 use camera::Camera;
 use raylib::prelude::*;
-use renderer::{Assets, render};
+use renderer::{render, Assets};
 use shading::{Skybox, Tex};
 use std::f32::consts::PI;
 use vec3::Vec3;
@@ -35,48 +35,50 @@ fn main() {
     let img = Image::gen_image_color(fb_w, fb_h, Color::BLACK);
     let mut tex2d = rl.load_texture_from_image(&thread, &img).expect("texture");
 
-    // --- Texturas para la isla ---
-    let grass =
-        load_texture_rgba("assets/cesped.jpg").or_else(|| load_texture_rgba("assets/pasto.jpg"));
-    let dirt = load_texture_rgba("assets/tierra.jpg");
+    // --- Texturas de bloques ---
+    // grass: cesped.jpg o pasto.jpg (usa la primera que exista)
+    let grass  = load_texture_rgba("assets/cesped.jpg")
+                    .or_else(|| load_texture_rgba("assets/pasto.jpg"));
+    let dirt   = load_texture_rgba("assets/tierra.jpg");
+    let stone  = load_texture_rgba("assets/piedra.jpg");
+    let wood   = load_texture_rgba("assets/madera.jpg");
+    let leaves = load_texture_rgba("assets/hojas.jpg");
+    let lava   = load_texture_rgba("assets/lava.jpg");
 
     // Mantener buffers vivos y crear Tex
-    let (mut grass_buf, mut grass_wh) = (None, (0u32, 0u32));
-    let (mut dirt_buf, mut dirt_wh) = (None, (0u32, 0u32));
+    let (mut grass_buf, mut grass_wh) = (None, (0u32,0u32));
+    let (mut dirt_buf,  mut dirt_wh)  = (None, (0u32,0u32));
+    let (mut stone_buf, mut stone_wh) = (None, (0u32,0u32));
+    let (mut wood_buf,  mut wood_wh)  = (None, (0u32,0u32));
+    let (mut leaves_buf, mut leaves_wh) = (None, (0u32,0u32));
+    let (mut lava_buf, mut lava_wh)   = (None, (0u32,0u32));
 
-    if let Some((b, w, h)) = grass {
-        grass_buf = Some(b);
-        grass_wh = (w, h);
-    }
-    if let Some((b, w, h)) = dirt {
-        dirt_buf = Some(b);
-        dirt_wh = (w, h);
-    }
+    if let Some((b,w,h)) = grass  { grass_buf  = Some(b); grass_wh  = (w,h); }
+    if let Some((b,w,h)) = dirt   { dirt_buf   = Some(b); dirt_wh   = (w,h); }
+    if let Some((b,w,h)) = stone  { stone_buf  = Some(b); stone_wh  = (w,h); }
+    if let Some((b,w,h)) = wood   { wood_buf   = Some(b); wood_wh   = (w,h); }
+    if let Some((b,w,h)) = leaves { leaves_buf = Some(b); leaves_wh = (w,h); }
+    if let Some((b,w,h)) = lava   { lava_buf   = Some(b); lava_wh   = (w,h); }
 
-    let grass_tex = grass_buf.as_ref().map(|b| Tex {
-        pix: &b[..],
-        w: grass_wh.0,
-        h: grass_wh.1,
-    });
-    let dirt_tex = dirt_buf.as_ref().map(|b| Tex {
-        pix: &b[..],
-        w: dirt_wh.0,
-        h: dirt_wh.1,
-    });
+    let grass_tex  = grass_buf.as_ref().map(|b|  Tex{ pix: &b[..], w: grass_wh.0,  h: grass_wh.1  });
+    let dirt_tex   = dirt_buf.as_ref().map(|b|   Tex{ pix: &b[..], w: dirt_wh.0,   h: dirt_wh.1   });
+    let stone_tex  = stone_buf.as_ref().map(|b|  Tex{ pix: &b[..], w: stone_wh.0,  h: stone_wh.1  });
+    let wood_tex   = wood_buf.as_ref().map(|b|   Tex{ pix: &b[..], w: wood_wh.0,   h: wood_wh.1   });
+    let leaves_tex = leaves_buf.as_ref().map(|b| Tex{ pix: &b[..], w: leaves_wh.0, h: leaves_wh.1 });
+    let lava_tex   = lava_buf.as_ref().map(|b|   Tex{ pix: &b[..], w: lava_wh.0,   h: lava_wh.1   });
 
-    // --- Skybox opcional (6 caras) ---
+    // --- Skybox (acepta .jpg o .png) ---
+    let face_names = ["px","nx","py","ny","pz","nz"];
     let mut sky_imgs: Option<Vec<(Vec<u8>, u32, u32)>> = {
-        let names = ["px", "nx", "py", "ny", "pz", "nz"];
-        let mut acc: Vec<(Vec<u8>, u32, u32)> = Vec::new();
+        let mut acc: Vec<(Vec<u8>,u32,u32)> = Vec::new();
         let mut ok = true;
-        for n in names {
-            let p = format!("assets/skybox/{}.jpg", n);
-            if let Some(t) = load_texture_rgba(&p) {
+        for n in face_names {
+            // intenta .jpg y luego .png
+            let p_jpg = format!("assets/skybox/{}.jpg", n);
+            let p_png = format!("assets/skybox/{}.png", n);
+            if let Some(t) = load_texture_rgba(&p_jpg).or_else(|| load_texture_rgba(&p_png)) {
                 acc.push(t);
-            } else {
-                ok = false;
-                break;
-            }
+            } else { ok = false; break; }
         }
         if ok { Some(acc) } else { None }
     };
@@ -84,7 +86,7 @@ fn main() {
     // Cámara orbital y luz
     let mut yaw: f32 = 0.6;
     let mut pitch: f32 = 0.25;
-    let mut radius: f32 = 4.0; // un poco más lejos para ver la isla
+    let mut radius: f32 = 4.0;              // un poco más lejos para ver la isla
     let mut light_pos = Vec3::new(2.5, 3.0, 2.5);
 
     let mut frame = vec![0u8; (fb_w * fb_h * 4) as usize];
@@ -92,36 +94,16 @@ fn main() {
     while !rl.window_should_close() {
         let dt = rl.get_frame_time();
         let speed = 1.6;
-        if rl.is_key_down(KeyboardKey::KEY_LEFT) {
-            yaw -= speed * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_RIGHT) {
-            yaw += speed * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_UP) {
-            pitch -= speed * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_DOWN) {
-            pitch += speed * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_Q) {
-            radius = (radius - 1.5 * dt).max(1.2);
-        }
-        if rl.is_key_down(KeyboardKey::KEY_E) {
-            radius += 1.5 * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_A) {
-            light_pos.x -= 2.0 * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_D) {
-            light_pos.x += 2.0 * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_W) {
-            light_pos.y += 2.0 * dt;
-        }
-        if rl.is_key_down(KeyboardKey::KEY_S) {
-            light_pos.y -= 2.0 * dt;
-        }
+        if rl.is_key_down(KeyboardKey::KEY_LEFT)  { yaw   -= speed * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_RIGHT) { yaw   += speed * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_UP)    { pitch -= speed * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_DOWN)  { pitch += speed * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_Q)     { radius = (radius - 1.5 * dt).max(1.2); }
+        if rl.is_key_down(KeyboardKey::KEY_E)     { radius += 1.5 * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_A)     { light_pos.x -= 2.0 * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_D)     { light_pos.x += 2.0 * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_W)     { light_pos.y += 2.0 * dt; }
+        if rl.is_key_down(KeyboardKey::KEY_S)     { light_pos.y -= 2.0 * dt; }
         pitch = pitch.clamp(-PI * 0.49, PI * 0.49);
 
         let eye = Vec3::new(
@@ -131,48 +113,27 @@ fn main() {
         );
         let cam = Camera {
             eye,
-            target: Vec3::new(1.0, 0.0, 1.0), // centra la órbita sobre la isla (aprox en (1,0,1))
+            target: Vec3::new(1.0, 0.0, 1.0), // centro de la isla
             up: Vec3::new(0.0, 1.0, 0.0),
             fov_y: 60.0,
         };
 
-        // Vista del skybox (si existe)
         let skybox_view = sky_imgs.as_ref().map(|v| Skybox {
-            px: Tex {
-                pix: &v[0].0[..],
-                w: v[0].1,
-                h: v[0].2,
-            },
-            nx: Tex {
-                pix: &v[1].0[..],
-                w: v[1].1,
-                h: v[1].2,
-            },
-            py: Tex {
-                pix: &v[2].0[..],
-                w: v[2].1,
-                h: v[2].2,
-            },
-            ny: Tex {
-                pix: &v[3].0[..],
-                w: v[3].1,
-                h: v[3].2,
-            },
-            pz: Tex {
-                pix: &v[4].0[..],
-                w: v[4].1,
-                h: v[4].2,
-            },
-            nz: Tex {
-                pix: &v[5].0[..],
-                w: v[5].1,
-                h: v[5].2,
-            },
+            px: Tex { pix: &v[0].0[..], w: v[0].1, h: v[0].2 },
+            nx: Tex { pix: &v[1].0[..], w: v[1].1, h: v[1].2 },
+            py: Tex { pix: &v[2].0[..], w: v[2].1, h: v[2].2 },
+            ny: Tex { pix: &v[3].0[..], w: v[3].1, h: v[3].2 },
+            pz: Tex { pix: &v[4].0[..], w: v[4].1, h: v[4].2 },
+            nz: Tex { pix: &v[5].0[..], w: v[5].1, h: v[5].2 },
         });
 
         let assets = Assets {
-            grass: grass_tex,
-            dirt: dirt_tex,
+            grass:  grass_tex,
+            dirt:   dirt_tex,
+            stone:  stone_tex,
+            wood:   wood_tex,
+            leaves: leaves_tex,
+            lava:   lava_tex,
             skybox: skybox_view,
         };
 
@@ -182,12 +143,6 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::BLACK);
         d.draw_texture(&tex2d, 0, 0, Color::WHITE);
-        d.draw_text(
-            "Flechas: orbitar | Q/E: zoom | WASD: luz",
-            12,
-            12,
-            20,
-            Color::WHITE,
-        );
+        d.draw_text("Flechas: orbitar | Q/E: zoom | WASD: luz", 12, 12, 20, Color::WHITE);
     }
 }
