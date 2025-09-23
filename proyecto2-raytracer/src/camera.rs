@@ -18,9 +18,6 @@ impl Camera {
         let x = (2.0 * u - 1.0) * aspect * scale;
         let y = (1.0 - 2.0 * v) * scale;
         let dir = right.mul(x).add(up.mul(y)).add(forward).norm();
-        Ray {
-            orig: self.eye,
-            dir,
-        }
+        Ray { orig: self.eye, dir }
     }
 }
