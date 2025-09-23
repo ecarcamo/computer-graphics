@@ -1,57 +1,60 @@
-use crate::object::Intersectable;
+use crate::object::{Intersectable, MaterialParams};
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
 #[derive(Copy, Clone)]
 pub struct Plane {
-    pub point: Vec3,        // Un punto en el plano
-    pub normal: Vec3,       // Vector normal al plano (debe estar normalizado)
-    pub albedo_color: Vec3, // Color del plano
+    pub point: Vec3,
+    pub normal: Vec3,
+    pub albedo_color: Vec3,
+
+    pub specular_strength: f32,
+    pub shininess: f32,
+    pub reflectivity: f32,
+    pub transparency: f32,
+    pub ior: f32,
+    pub emissive: Vec3,
 }
 
 impl Plane {
     pub fn new(point: Vec3, normal: Vec3, albedo_color: Vec3) -> Self {
         Self {
             point,
-            normal: normal.norm(), // Asegurarse de que la normal esté normalizada
+            normal: normal.norm(),
             albedo_color,
+            specular_strength: 0.0,
+            shininess: 16.0,
+            reflectivity: 0.0,
+            transparency: 0.0,
+            ior: 1.0,
+            emissive: Vec3::new(0.0, 0.0, 0.0),
         }
     }
 
     pub fn intersect(&self, ray: &Ray) -> Option<f32> {
-        // Producto punto entre la normal y la dirección del rayo
         let denom = self.normal.dot(ray.dir);
-
-        // Si el rayo es paralelo al plano o apunta en la misma dirección que la normal
-        if denom.abs() < 1e-6 {
-            return None;
-        }
-
-        // Calcular distancia desde el origen del rayo al plano
+        if denom.abs() < 1e-6 { return None; }
         let v = self.point.sub(ray.orig);
         let t = v.dot(self.normal) / denom;
-
-        // Solo intersecciones en la dirección positiva del rayo
         if t > 0.0 { Some(t) } else { None }
     }
 
-    pub fn normal_at(&self, _p: Vec3) -> Vec3 {
-        // La normal es constante en cualquier punto del plano
-        self.normal
-    }
+    pub fn normal_at(&self, _p: Vec3) -> Vec3 { self.normal }
 }
 
 impl Intersectable for Plane {
-    fn intersect(&self, ray: &Ray) -> Option<f32> {
-        // Reutilizar el método existente
-        self.intersect(ray)
-    }
-
-    fn normal_at(&self, _point: Vec3) -> Vec3 {
-        self.normal
-    }
-
-    fn albedo(&self) -> Vec3 {
-        self.albedo_color
+    fn intersect(&self, ray: &Ray) -> Option<f32> { self.intersect(ray) }
+    fn normal_at(&self, _point: Vec3) -> Vec3 { self.normal }
+    fn albedo(&self) -> Vec3 { self.albedo_color }
+    fn material_at(&self, p: Vec3) -> MaterialParams {
+        MaterialParams {
+            albedo: self.albedo_at(p),
+            specular_strength: self.specular_strength,
+            shininess: self.shininess,
+            reflectivity: self.reflectivity,
+            transparency: self.transparency,
+            ior: self.ior,
+            emissive: self.emissive,
+        }
     }
 }
