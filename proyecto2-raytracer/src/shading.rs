@@ -2,13 +2,20 @@ use crate::vec3::Vec3;
 
 pub fn to_rgba(c: Vec3) -> [u8; 4] {
     let g = c.clamp01();
-    [(g.x * 255.0) as u8, (g.y * 255.0) as u8, (g.z * 255.0) as u8, 255]
+    [
+        (g.x * 255.0) as u8,
+        (g.y * 255.0) as u8,
+        (g.z * 255.0) as u8,
+        255,
+    ]
 }
 
 // Cielo procedural (fallback si no hay skybox)
 pub fn sky(dir: Vec3) -> Vec3 {
     let t = 0.5 * (dir.y + 1.0);
-    Vec3::new(0.2, 0.6, 0.35).mul(1.0 - t).add(Vec3::new(0.9, 0.9, 0.2).mul(t))
+    Vec3::new(0.2, 0.6, 0.35)
+        .mul(1.0 - t)
+        .add(Vec3::new(0.9, 0.9, 0.2).mul(t))
 }
 
 // Reflexión especular
@@ -20,7 +27,9 @@ pub fn reflect(i: Vec3, n: Vec3) -> Vec3 {
 pub fn refract(i: Vec3, n: Vec3, eta: f32) -> Option<Vec3> {
     let cosi = (-i).dot(n).clamp(-1.0, 1.0);
     let sin2_t = eta * eta * (1.0 - cosi * cosi);
-    if sin2_t > 1.0 { return None; }
+    if sin2_t > 1.0 {
+        return None;
+    }
     let cost = (1.0 - sin2_t).sqrt();
     Some(i.mul(eta).add(n.mul(eta * cosi - cost)).norm())
 }
@@ -32,25 +41,46 @@ pub fn specular_phong(r: Vec3, v: Vec3, k_s: f32, shininess: f32) -> f32 {
 }
 
 #[derive(Copy, Clone)]
-pub struct Tex<'a> { pub pix: &'a [u8], pub w: u32, pub h: u32 }
+pub struct Tex<'a> {
+    pub pix: &'a [u8],
+    pub w: u32,
+    pub h: u32,
+}
 
 #[derive(Copy, Clone)]
 pub struct Skybox<'a> {
-    pub px: Tex<'a>, pub nx: Tex<'a>,
-    pub py: Tex<'a>, pub ny: Tex<'a>,
-    pub pz: Tex<'a>, pub nz: Tex<'a>,
+    pub px: Tex<'a>,
+    pub nx: Tex<'a>,
+    pub py: Tex<'a>,
+    pub ny: Tex<'a>,
+    pub pz: Tex<'a>,
+    pub nz: Tex<'a>,
 }
 
 // Muestrea el cubemap
 pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
     let d = dir.norm();
-    let ax = d.x.abs(); let ay = d.y.abs(); let az = d.z.abs();
+    let ax = d.x.abs();
+    let ay = d.y.abs();
+    let az = d.z.abs();
     let (face, u, v) = if ax >= ay && ax >= az {
-        if d.x > 0.0 { ("px", -d.z/ax,  d.y/ax) } else { ("nx",  d.z/ax,  d.y/ax) }
+        if d.x > 0.0 {
+            ("px", -d.z / ax, d.y / ax)
+        } else {
+            ("nx", d.z / ax, d.y / ax)
+        }
     } else if ay >= ax && ay >= az {
-        if d.y > 0.0 { ("py",  d.x/ay, -d.z/ay) } else { ("ny",  d.x/ay,  d.z/ay) }
+        if d.y > 0.0 {
+            ("py", d.x / ay, -d.z / ay)
+        } else {
+            ("ny", d.x / ay, d.z / ay)
+        }
     } else {
-        if d.z > 0.0 { ("pz",  d.x/az,  d.y/az) } else { ("nz", -d.x/az,  d.y/az) }
+        if d.z > 0.0 {
+            ("pz", d.x / az, d.y / az)
+        } else {
+            ("nz", -d.x / az, d.y / az)
+        }
     };
     let uu = (u + 1.0) * 0.5;
     let vv = (v + 1.0) * 0.5;
@@ -61,11 +91,13 @@ pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
         let px = (uu * (t.w as f32 - 1.0)).round() as u32;
         let py = ((1.0 - vv) * (t.h as f32 - 1.0)).round() as u32;
         let idx = ((py * t.w + px) * 4) as usize;
-        if idx + 3 >= t.pix.len() { return Vec3::new(0.5,0.7,1.0); }
+        if idx + 3 >= t.pix.len() {
+            return Vec3::new(0.5, 0.7, 1.0);
+        }
         let r = t.pix[idx] as f32 / 255.0;
         let g = t.pix[idx + 1] as f32 / 255.0;
         let b = t.pix[idx + 2] as f32 / 255.0;
-        Vec3::new(r,g,b)
+        Vec3::new(r, g, b)
     };
 
     match face {
@@ -74,6 +106,6 @@ pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
         "py" => sample(&sb.py, uu, vv),
         "ny" => sample(&sb.ny, uu, vv),
         "pz" => sample(&sb.pz, uu, vv),
-        _    => sample(&sb.nz, uu, vv),
+        _ => sample(&sb.nz, uu, vv),
     }
 }

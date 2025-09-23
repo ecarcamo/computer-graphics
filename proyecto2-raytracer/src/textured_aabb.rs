@@ -32,8 +32,16 @@ impl<'a> TexturedAabb<'a> {
         emissive: Vec3,
     ) -> Self {
         Self {
-            inner, pixels, w, h,
-            specular_strength, shininess, reflectivity, transparency, ior, emissive,
+            inner,
+            pixels,
+            w,
+            h,
+            specular_strength,
+            shininess,
+            reflectivity,
+            transparency,
+            ior,
+            emissive,
         }
     }
 
@@ -89,9 +97,15 @@ impl<'a> TexturedAabb<'a> {
 }
 
 impl<'a> Intersectable for TexturedAabb<'a> {
-    fn intersect(&self, ray: &Ray) -> Option<f32> { self.inner.intersect(ray) }
-    fn normal_at(&self, point: Vec3) -> Vec3 { self.inner.normal_at(point) }
-    fn albedo(&self) -> Vec3 { self.inner.albedo_color }
+    fn intersect(&self, ray: &Ray) -> Option<f32> {
+        self.inner.intersect(ray)
+    }
+    fn normal_at(&self, point: Vec3) -> Vec3 {
+        self.inner.normal_at(point)
+    }
+    fn albedo(&self) -> Vec3 {
+        self.inner.albedo_color
+    }
     fn albedo_at(&self, point: Vec3) -> Vec3 {
         let (u, v) = self.uv_from_point(point);
         self.sample_rgba(u, v)

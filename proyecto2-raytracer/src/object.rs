@@ -3,13 +3,13 @@ use crate::vec3::Vec3;
 
 #[derive(Copy, Clone)]
 pub struct MaterialParams {
-    pub albedo: Vec3,            // Color base (tras textura)
-    pub specular_strength: f32,  // [0..1]
-    pub shininess: f32,          // >= 1
-    pub reflectivity: f32,       // [0..1]
-    pub transparency: f32,       // [0..1]
-    pub ior: f32,                // índice de refracción (1=aire)
-    pub emissive: Vec3,          // luz propia
+    pub albedo: Vec3,           // Color base (tras textura)
+    pub specular_strength: f32, // [0..1]
+    pub shininess: f32,         // >= 1
+    pub reflectivity: f32,      // [0..1]
+    pub transparency: f32,      // [0..1]
+    pub ior: f32,               // índice de refracción (1=aire)
+    pub emissive: Vec3,         // luz propia
 }
 
 pub trait Intersectable {
@@ -18,7 +18,9 @@ pub trait Intersectable {
 
     // Compatibilidad con tu versión previa
     fn albedo(&self) -> Vec3;
-    fn albedo_at(&self, _point: Vec3) -> Vec3 { self.albedo() }
+    fn albedo_at(&self, _point: Vec3) -> Vec3 {
+        self.albedo()
+    }
 
     // NUEVO: material paramétrico por punto
     fn material_at(&self, p: Vec3) -> MaterialParams {
