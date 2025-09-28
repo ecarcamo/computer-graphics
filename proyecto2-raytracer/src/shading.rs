@@ -10,12 +10,13 @@ pub fn to_rgba(c: Vec3) -> [u8; 4] {
     ]
 }
 
-// Cielo procedural (fallback si no hay skybox)
+// Cielo procedural: degrada azules según el ángulo de la mirada
 pub fn sky(dir: Vec3) -> Vec3 {
-    let t = 0.5 * (dir.y + 1.0);
-    Vec3::new(0.2, 0.6, 0.35)
-        .mul(1.0 - t)
-        .add(Vec3::new(0.9, 0.9, 0.2).mul(t))
+    let t = dir.y.clamp(-1.0, 1.0);
+    let daytime = 0.5 * (t + 1.0);
+    let horizon = Vec3::new(0.8, 0.85, 0.9);
+    let zenith = Vec3::new(0.1, 0.3, 0.7);
+    zenith.mul(daytime).add(horizon.mul(1.0 - daytime))
 }
 
 // Reflexión especular
@@ -55,9 +56,10 @@ pub struct Skybox<'a> {
     pub ny: Tex<'a>,
     pub pz: Tex<'a>,
     pub nz: Tex<'a>,
+    pub tint: Vec3,
 }
 
-// Muestrea el cubemap
+// Muestrea el cubemap y aplica un tinte opcional.
 pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
     let d = dir.norm();
     let ax = d.x.abs();
@@ -75,12 +77,10 @@ pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
         } else {
             ("ny", d.x / ay, d.z / ay)
         }
+    } else if d.z > 0.0 {
+        ("pz", d.x / az, d.y / az)
     } else {
-        if d.z > 0.0 {
-            ("pz", d.x / az, d.y / az)
-        } else {
-            ("nz", -d.x / az, d.y / az)
-        }
+        ("nz", -d.x / az, d.y / az)
     };
     let uu = (u + 1.0) * 0.5;
     let vv = (v + 1.0) * 0.5;
@@ -100,12 +100,14 @@ pub fn sample_skybox(dir: Vec3, sb: &Skybox) -> Vec3 {
         Vec3::new(r, g, b)
     };
 
-    match face {
+    let base = match face {
         "px" => sample(&sb.px, uu, vv),
         "nx" => sample(&sb.nx, uu, vv),
         "py" => sample(&sb.py, uu, vv),
         "ny" => sample(&sb.ny, uu, vv),
         "pz" => sample(&sb.pz, uu, vv),
         _ => sample(&sb.nz, uu, vv),
-    }
+    };
+
+    base.hadamard(sb.tint)
 }

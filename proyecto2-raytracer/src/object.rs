@@ -12,7 +12,7 @@ pub struct MaterialParams {
     pub emissive: Vec3,         // luz propia
 }
 
-pub trait Intersectable {
+pub trait Intersectable: Send + Sync {
     fn intersect(&self, ray: &Ray) -> Option<f32>;
     fn normal_at(&self, point: Vec3) -> Vec3;
 
