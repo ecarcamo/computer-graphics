@@ -367,7 +367,7 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
         albedo: Vec3::new(1.0, 1.0, 1.0),
         specular: 0.85,
         shininess: 110.0,
-        reflectivity: 0.38,
+        reflectivity: 0.15,
         transparency: 0.0,
         ior: 2.4,
         emissive: Vec3::new(0.0, 0.0, 0.0),
@@ -375,9 +375,9 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
     let iron_mat = BlockMaterial {
         tex: assets.iron,
         albedo: Vec3::new(0.95, 0.95, 0.98),
-        specular: 0.45,
-        shininess: 85.0,
-        reflectivity: 0.25,
+        specular: 0.4,
+        shininess: 75.0,
+        reflectivity: 0.1,
         transparency: 0.0,
         ior: 1.0,
         emissive: Vec3::new(0.0, 0.0, 0.0),
@@ -424,6 +424,9 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
     };
 
     let mut used: HashSet<(i32, i32, i32, u8)> = HashSet::new();
+    let center_x: i32 = 3;
+    let center_z: i32 = 2;
+    let adjust = |x: i32, z: i32| -> (i32, i32) { (x - center_x, z - center_z) };
 
     match world {
         WorldKind::Overworld => {
@@ -477,34 +480,57 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
                         continue;
                     }
                     if !occupied.contains(&(x, z)) {
-                        place_block(&mut objects, &mut used, dirt_mat, x, 0, z);
+                        let (sx, sz) = adjust(x, z);
+                        place_block(&mut objects, &mut used, dirt_mat, sx, 0, sz);
                         if !no_cover.contains(&(x, z)) {
-                            grass_cover_mat.place_cover(&mut objects, x, 0, z, 0.18);
+                            grass_cover_mat.place_cover(&mut objects, sx, 0, sz, 0.18);
                         }
                     }
                 }
             }
 
             for &(x, z) in &water_tiles {
-                place_with_tag(&mut objects, &mut used, water_mat, x, 0, z, 1);
-                place_with_tag(&mut objects, &mut used, stone_mat, x, -1, z, 1);
+                let (sx, sz) = adjust(x, z);
+                place_with_tag(&mut objects, &mut used, water_mat, sx, 0, sz, 1);
+                place_with_tag(&mut objects, &mut used, stone_mat, sx, -1, sz, 1);
             }
 
-            place_with_tag(&mut objects, &mut used, ice_mat, 4, 0, 4, 1);
-            place_with_tag(&mut objects, &mut used, stone_mat, 4, -1, 4, 1);
+            let (sx_ice, sz_ice) = adjust(4, 4);
+            place_with_tag(&mut objects, &mut used, ice_mat, sx_ice, 0, sz_ice, 1);
+            place_with_tag(&mut objects, &mut used, stone_mat, sx_ice, -1, sz_ice, 1);
             for &(y, z) in &[(0, 4), (-1, 4), (-2, 4), (-3, 4)] {
-                place_with_tag(&mut objects, &mut used, water_mat, 3, y, z, 1);
+                let (sx, sz) = adjust(3, z);
+                place_with_tag(&mut objects, &mut used, water_mat, sx, y, sz, 1);
             }
-            place_with_tag(&mut objects, &mut used, water_mat, 3, -3, 5, 1);
-            place_with_tag(&mut objects, &mut used, stone_mat, 3, -4, 5, 1);
+            let (sx_cascade, sz_cascade) = adjust(3, 5);
+            place_with_tag(
+                &mut objects,
+                &mut used,
+                water_mat,
+                sx_cascade,
+                -3,
+                sz_cascade,
+                1,
+            );
+            place_with_tag(
+                &mut objects,
+                &mut used,
+                stone_mat,
+                sx_cascade,
+                -4,
+                sz_cascade,
+                1,
+            );
 
             for &(x, z) in &lava_tiles {
-                place_with_tag(&mut objects, &mut used, lava_mat, x, 0, z, 1);
-                place_with_tag(&mut objects, &mut used, stone_mat, x, -1, z, 1);
+                let (sx, sz) = adjust(x, z);
+                place_with_tag(&mut objects, &mut used, lava_mat, sx, 0, sz, 1);
+                place_with_tag(&mut objects, &mut used, stone_mat, sx, -1, sz, 1);
             }
 
             for y in 1..=3 {
-                place_with_tag(&mut objects, &mut used, wood_mat, 2, y, 2, 1);
+                let (sx, sz) = adjust(2, 2);
+                place_with_tag(&mut objects, &mut used, wood_mat, sx, y, sz, 1);
             }
             for y in 3..=4 {
                 for dx in -1..=1 {
@@ -512,65 +538,41 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
                         if y == 3 && dx == 0 && dz == 0 {
                             continue;
                         }
-                        place_with_tag(&mut objects, &mut used, leaves_mat, 2 + dx, y, 2 + dz, 1);
+                        let (sx, sz) = adjust(2 + dx, 2 + dz);
+                        place_with_tag(&mut objects, &mut used, leaves_mat, sx, y, sz, 1);
                     }
                 }
             }
 
-            place_with_tag(&mut objects, &mut used, stone_mat, 2, 0, 1, 1);
-            place_with_tag(&mut objects, &mut used, diamond_mat, 2, 1, 1, 1);
-            place_with_tag(&mut objects, &mut used, stone_mat, 3, 0, 1, 1);
-            place_with_tag(&mut objects, &mut used, iron_mat, 3, 1, 1, 1);
-            place_with_tag(
-                &mut objects,
-                &mut used,
-                chest_mat,
-                chest_tile.0,
-                0,
-                chest_tile.1,
-                1,
-            );
+            let (sx_ped1, sz_ped1) = adjust(2, 1);
+            place_with_tag(&mut objects, &mut used, stone_mat, sx_ped1, 0, sz_ped1, 1);
+            place_with_tag(&mut objects, &mut used, diamond_mat, sx_ped1, 1, sz_ped1, 1);
+            let (sx_ped2, sz_ped2) = adjust(3, 1);
+            place_with_tag(&mut objects, &mut used, stone_mat, sx_ped2, 0, sz_ped2, 1);
+            place_with_tag(&mut objects, &mut used, iron_mat, sx_ped2, 1, sz_ped2, 1);
+            let (sx_chest, sz_chest) = adjust(chest_tile.0, chest_tile.1);
+            place_with_tag(&mut objects, &mut used, chest_mat, sx_chest, 0, sz_chest, 1);
 
             let portal_left = 4;
             let portal_right = 6;
             let portal_z = 2;
             let portal_top = 4;
             for y in 0..=portal_top {
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    portal_left,
-                    y,
-                    portal_z,
-                    1,
-                );
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    portal_right,
-                    y,
-                    portal_z,
-                    1,
-                );
+                let (sx_l, sz) = adjust(portal_left, portal_z);
+                let (sx_r, sz_r) = adjust(portal_right, portal_z);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx_l, y, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx_r, y, sz_r, 1);
             }
             for x in portal_left..=portal_right {
-                place_with_tag(&mut objects, &mut used, obsidian_mat, x, 0, portal_z, 1);
-                place_with_tag(&mut objects, &mut used, obsidian_mat, x, -1, portal_z, 1);
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    x,
-                    portal_top,
-                    portal_z,
-                    1,
-                );
+                let (sx, sz) = adjust(x, portal_z);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, 0, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, -1, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, portal_top, sz, 1);
             }
             for y in 1..portal_top {
                 for x in (portal_left + 1)..portal_right {
-                    place_with_tag(&mut objects, &mut used, portal_mat, x, y, portal_z, 1);
+                    let (sx, sz) = adjust(x, portal_z);
+                    place_with_tag(&mut objects, &mut used, portal_mat, sx, y, sz, 1);
                 }
             }
         }
@@ -581,80 +583,70 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
             for x in 0..=max_x {
                 for z in 0..=max_z {
                     if x == 0 || x == max_x || z == 0 || z == max_z {
-                        place_block(&mut objects, &mut used, obsidian_mat, x, -1, z);
-                        place_with_tag(&mut objects, &mut used, obsidian_mat, x, 0, z, 1);
+                        let (sx, sz) = adjust(x, z);
+                        place_block(&mut objects, &mut used, obsidian_mat, sx, -1, sz);
+                        place_with_tag(&mut objects, &mut used, obsidian_mat, sx, 0, sz, 1);
                     }
                 }
             }
 
             for &(x, z) in &[(1, 1), (1, 4), (4, 1), (4, 4)] {
-                place_with_tag(&mut objects, &mut used, obsidian_mat, x, 0, z, 1);
+                let (sx, sz) = adjust(x, z);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, 0, sz, 1);
             }
 
             for x in 2..=3 {
                 for z in 2..=3 {
-                    place_with_tag(&mut objects, &mut used, lava_mat, x, 0, z, 1);
+                    let (sx, sz) = adjust(x, z);
+                    place_with_tag(&mut objects, &mut used, lava_mat, sx, 0, sz, 1);
                 }
             }
 
             for &(x, z) in &[(1, 1), (4, 4)] {
                 for y in 1..=3 {
-                    place_with_tag(&mut objects, &mut used, obsidian_mat, x, y, z, 1);
+                    let (sx, sz) = adjust(x, z);
+                    place_with_tag(&mut objects, &mut used, obsidian_mat, sx, y, sz, 1);
                 }
-                place_with_tag(&mut objects, &mut used, glowstone_mat, x, 4, z, 1);
+                let (sx, sz) = adjust(x, z);
+                place_with_tag(&mut objects, &mut used, glowstone_mat, sx, 4, sz, 1);
             }
             for &(x, z) in &[(1, 4), (4, 1)] {
-                place_with_tag(&mut objects, &mut used, glowstone_mat, x, 1, z, 1);
+                let (sx, sz) = adjust(x, z);
+                place_with_tag(&mut objects, &mut used, glowstone_mat, sx, 1, sz, 1);
             }
 
-            place_with_tag(&mut objects, &mut used, diamond_mat, 2, 1, 4, 1);
-            place_with_tag(&mut objects, &mut used, iron_mat, 3, 1, 1, 1);
+            let (sx_dia, sz_dia) = adjust(2, 4);
+            place_with_tag(&mut objects, &mut used, diamond_mat, sx_dia, 1, sz_dia, 1);
+            let (sx_iron, sz_iron) = adjust(3, 1);
+            place_with_tag(&mut objects, &mut used, iron_mat, sx_iron, 1, sz_iron, 1);
 
             let portal_left = 4;
             let portal_right = 6;
             let portal_z = 2;
             let portal_top = 4;
             for y in 0..=portal_top {
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    portal_left,
-                    y,
-                    portal_z,
-                    1,
-                );
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    portal_right,
-                    y,
-                    portal_z,
-                    1,
-                );
+                let (sx_l, sz) = adjust(portal_left, portal_z);
+                let (sx_r, sz_r) = adjust(portal_right, portal_z);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx_l, y, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx_r, y, sz_r, 1);
             }
             for x in portal_left..=portal_right {
-                place_with_tag(&mut objects, &mut used, obsidian_mat, x, 0, portal_z, 1);
-                place_with_tag(&mut objects, &mut used, obsidian_mat, x, -1, portal_z, 1);
-                place_with_tag(
-                    &mut objects,
-                    &mut used,
-                    obsidian_mat,
-                    x,
-                    portal_top,
-                    portal_z,
-                    1,
-                );
+                let (sx, sz) = adjust(x, portal_z);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, 0, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, -1, sz, 1);
+                place_with_tag(&mut objects, &mut used, obsidian_mat, sx, portal_top, sz, 1);
             }
             for y in 1..portal_top {
                 for x in (portal_left + 1)..portal_right {
-                    place_with_tag(&mut objects, &mut used, portal_mat, x, y, portal_z, 1);
+                    let (sx, sz) = adjust(x, portal_z);
+                    place_with_tag(&mut objects, &mut used, portal_mat, sx, y, sz, 1);
                 }
             }
 
-            place_with_tag(&mut objects, &mut used, lava_mat, 2, -1, 2, 1);
-            place_with_tag(&mut objects, &mut used, lava_mat, 3, -1, 3, 1);
+            let (sx_lava1, sz_lava1) = adjust(2, 2);
+            place_with_tag(&mut objects, &mut used, lava_mat, sx_lava1, -1, sz_lava1, 1);
+            let (sx_lava2, sz_lava2) = adjust(3, 3);
+            place_with_tag(&mut objects, &mut used, lava_mat, sx_lava2, -1, sz_lava2, 1);
         }
     }
 

@@ -1,7 +1,7 @@
 //! Rendering pipeline and lighting helpers.
 
 pub mod lighting;
-pub mod pipeline;
+pub mod raytracer;
 
 pub use lighting::{Skybox, Tex};
-pub use pipeline::{Assets, WorldKind, build_scene, render};
+pub use raytracer::{Assets, WorldKind, build_scene, render};
