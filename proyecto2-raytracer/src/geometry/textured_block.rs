@@ -1,10 +1,13 @@
-use crate::aabb::Aabb;
-use crate::object::{Intersectable, MaterialParams};
-use crate::ray::Ray;
-use crate::vec3::Vec3;
+//! Textured cube primitive that wraps a `SolidBlock` with a texture atlas.
 
-pub struct TexturedAabb<'a> {
-    pub inner: Aabb,
+use super::solid_block::SolidBlock;
+use crate::math::Vec3;
+use crate::ray::Ray;
+use crate::scene::{Intersectable, MaterialParams};
+
+/// Cube that samples a texture atlas per face.
+pub struct TexturedBlock<'a> {
+    pub inner: SolidBlock,
     pub pixels: &'a [u8], // RGBA8
     pub w: u32,
     pub h: u32,
@@ -18,9 +21,9 @@ pub struct TexturedAabb<'a> {
     pub emissive: Vec3,
 }
 
-impl<'a> TexturedAabb<'a> {
+impl<'a> TexturedBlock<'a> {
     pub fn from_raw(
-        inner: Aabb,
+        inner: SolidBlock,
         pixels: &'a [u8],
         w: u32,
         h: u32,
@@ -96,7 +99,7 @@ impl<'a> TexturedAabb<'a> {
     }
 }
 
-impl<'a> Intersectable for TexturedAabb<'a> {
+impl<'a> Intersectable for TexturedBlock<'a> {
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         self.inner.intersect(ray)
     }

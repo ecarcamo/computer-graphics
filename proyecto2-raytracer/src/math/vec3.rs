@@ -1,3 +1,5 @@
+//! Minimal 3D vector helper used across camera, lighting, and geometry code.
+
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,

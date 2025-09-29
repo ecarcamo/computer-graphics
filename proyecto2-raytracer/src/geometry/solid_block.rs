@@ -1,9 +1,12 @@
-use crate::object::{Intersectable, MaterialParams};
+//! Axis-aligned cube primitive used for building Minecraft-style blocks.
+
+use crate::math::Vec3;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::scene::{Intersectable, MaterialParams};
 
 #[derive(Copy, Clone)]
-pub struct Aabb {
+/// Opaque cube used for regular (non-textured) blocks.
+pub struct SolidBlock {
     pub min: Vec3,
     pub max: Vec3,
     pub albedo_color: Vec3,
@@ -17,7 +20,8 @@ pub struct Aabb {
     pub emissive: Vec3,
 }
 
-impl Aabb {
+impl SolidBlock {
+    #[allow(dead_code)]
     pub fn unit() -> Self {
         Self {
             min: Vec3::new(-0.5, -0.5, -0.5),
@@ -108,7 +112,7 @@ impl Aabb {
     }
 }
 
-impl Intersectable for Aabb {
+impl Intersectable for SolidBlock {
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         self.intersect_impl(ray)
     }

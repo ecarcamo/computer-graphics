@@ -1,4 +1,6 @@
-use crate::vec3::Vec3;
+//! Lighting utilities: procedural sky, reflection helpers, and skybox sampling.
+
+use crate::math::Vec3;
 
 pub fn to_rgba(c: Vec3) -> [u8; 4] {
     let g = c.clamp01();

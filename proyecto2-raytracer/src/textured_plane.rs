@@ -1,6 +1,8 @@
-use crate::object::{Intersectable, MaterialParams};
+//! Optional infinite textured plane primitive (currently not used in the diorama).
+
+use crate::math::Vec3;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::scene::{Intersectable, MaterialParams};
 
 pub struct TexturedPlane<'a> {
     pub point: Vec3,    // un punto sobre el plano

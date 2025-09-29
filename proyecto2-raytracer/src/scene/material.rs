@@ -1,7 +1,10 @@
+//! Material definitions and the `Intersectable` trait shared across primitives.
+
+use crate::math::Vec3;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
 
 #[derive(Copy, Clone)]
+/// Physically-motivated parameters sampled per shading point.
 pub struct MaterialParams {
     pub albedo: Vec3,           // Color base (tras textura)
     pub specular_strength: f32, // [0..1]
@@ -12,6 +15,7 @@ pub struct MaterialParams {
     pub emissive: Vec3,         // luz propia
 }
 
+/// Common interface for any object that can be intersected by a ray.
 pub trait Intersectable: Send + Sync {
     fn intersect(&self, ray: &Ray) -> Option<f32>;
     fn normal_at(&self, point: Vec3) -> Vec3;

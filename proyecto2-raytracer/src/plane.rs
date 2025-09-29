@@ -1,6 +1,8 @@
-use crate::object::{Intersectable, MaterialParams};
+//! Infinite plane primitive (currently unused) retained for experimentation.
+
+use crate::math::Vec3;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::scene::{Intersectable, MaterialParams};
 
 #[derive(Copy, Clone)]
 pub struct Plane {

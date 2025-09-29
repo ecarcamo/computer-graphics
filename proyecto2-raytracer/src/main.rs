@@ -1,20 +1,19 @@
-mod aabb;
+//! Interactive Minecraft-inspired diorama rendered entirely on the CPU.
+
 mod camera;
-mod object;
+mod geometry;
+mod math;
 mod ray;
-mod renderer;
-mod shading;
-mod textured_aabb;
-mod vec3;
+mod rendering;
+mod scene;
 
 use camera::Camera;
+use math::Vec3;
 use raylib::prelude::*;
-use renderer::{Assets, WorldKind, render};
-use shading::{Skybox, Tex};
+use rendering::{Assets, Skybox, Tex, WorldKind, render};
 use std::f32::consts::PI;
-use vec3::Vec3;
 
-// Cargar imagen como RGBA8 bytes + dims
+/// Loads an image as RGBA8 bytes together with its dimensions.
 fn load_texture_rgba(path: &str) -> Option<(Vec<u8>, u32, u32)> {
     if let Ok(img) = image::open(path) {
         let rgba = img.to_rgba8();
@@ -25,6 +24,7 @@ fn load_texture_rgba(path: &str) -> Option<(Vec<u8>, u32, u32)> {
     }
 }
 
+/// Attempts to load a cubemap by trying `.jpg` and `.png` per face.
 fn load_cubemap(base: &str) -> Option<Vec<(Vec<u8>, u32, u32)>> {
     let face_names = ["px", "nx", "py", "ny", "pz", "nz"];
     let mut faces = Vec::with_capacity(6);
@@ -40,6 +40,7 @@ fn load_cubemap(base: &str) -> Option<Vec<(Vec<u8>, u32, u32)>> {
     Some(faces)
 }
 
+/// Builds a [`Skybox`] from raw image buffers and an optional tint multiplier.
 fn make_skybox<'a>(imgs: &'a [(Vec<u8>, u32, u32)], tint: Vec3) -> Skybox<'a> {
     Skybox {
         px: Tex {
@@ -91,6 +92,7 @@ fn main() {
     // grass: cesped.jpg o pasto.jpg (usa la primera que exista)
     let grass =
         load_texture_rgba("assets/cesped.jpg").or_else(|| load_texture_rgba("assets/pasto.jpg"));
+    let grass_cover = load_texture_rgba("assets/hierba.jpg");
     let dirt = load_texture_rgba("assets/tierra.jpg");
     let stone = load_texture_rgba("assets/piedra.jpg");
     let wood = load_texture_rgba("assets/madera.jpg");
@@ -102,9 +104,12 @@ fn main() {
     let diamond = load_texture_rgba("assets/diamante.jpg");
     let iron = load_texture_rgba("assets/hierro.jpg");
     let chest = load_texture_rgba("assets/cofre.jpg");
+    let ice = load_texture_rgba("assets/hielo.png");
+    let portal = load_texture_rgba("assets/portal.gif");
 
     // Mantener buffers vivos y crear Tex
     let (mut grass_buf, mut grass_wh) = (None, (0u32, 0u32));
+    let (mut grass_cover_buf, mut grass_cover_wh) = (None, (0u32, 0u32));
     let (mut dirt_buf, mut dirt_wh) = (None, (0u32, 0u32));
     let (mut stone_buf, mut stone_wh) = (None, (0u32, 0u32));
     let (mut wood_buf, mut wood_wh) = (None, (0u32, 0u32));
@@ -116,10 +121,16 @@ fn main() {
     let (mut diamond_buf, mut diamond_wh) = (None, (0u32, 0u32));
     let (mut iron_buf, mut iron_wh) = (None, (0u32, 0u32));
     let (mut chest_buf, mut chest_wh) = (None, (0u32, 0u32));
+    let (mut ice_buf, mut ice_wh) = (None, (0u32, 0u32));
+    let (mut portal_buf, mut portal_wh) = (None, (0u32, 0u32));
 
     if let Some((b, w, h)) = grass {
         grass_buf = Some(b);
         grass_wh = (w, h);
+    }
+    if let Some((b, w, h)) = grass_cover {
+        grass_cover_buf = Some(b);
+        grass_cover_wh = (w, h);
     }
     if let Some((b, w, h)) = dirt {
         dirt_buf = Some(b);
@@ -165,12 +176,30 @@ fn main() {
         chest_buf = Some(b);
         chest_wh = (w, h);
     }
+    if let Some((b, w, h)) = ice {
+        ice_buf = Some(b);
+        ice_wh = (w, h);
+    }
+    if let Some((b, w, h)) = portal {
+        portal_buf = Some(b);
+        portal_wh = (w, h);
+    }
 
-    let grass_tex = grass_buf.as_ref().map(|b| Tex {
-        pix: &b[..],
-        w: grass_wh.0,
-        h: grass_wh.1,
-    });
+    let grass_cover_tex = if let Some(b) = grass_cover_buf.as_ref() {
+        Some(Tex {
+            pix: &b[..],
+            w: grass_cover_wh.0,
+            h: grass_cover_wh.1,
+        })
+    } else if let Some(b) = grass_buf.as_ref() {
+        Some(Tex {
+            pix: &b[..],
+            w: grass_wh.0,
+            h: grass_wh.1,
+        })
+    } else {
+        None
+    };
     let dirt_tex = dirt_buf.as_ref().map(|b| Tex {
         pix: &b[..],
         w: dirt_wh.0,
@@ -225,6 +254,16 @@ fn main() {
         pix: &b[..],
         w: chest_wh.0,
         h: chest_wh.1,
+    });
+    let ice_tex = ice_buf.as_ref().map(|b| Tex {
+        pix: &b[..],
+        w: ice_wh.0,
+        h: ice_wh.1,
+    });
+    let portal_tex = portal_buf.as_ref().map(|b| Tex {
+        pix: &b[..],
+        w: portal_wh.0,
+        h: portal_wh.1,
     });
 
     // --- Skyboxes ---
@@ -302,7 +341,7 @@ fn main() {
         };
 
         let assets = Assets {
-            grass: grass_tex,
+            grass_cover: grass_cover_tex,
             dirt: dirt_tex,
             stone: stone_tex,
             wood: wood_tex,
@@ -314,6 +353,8 @@ fn main() {
             diamond: diamond_tex,
             iron: iron_tex,
             chest: chest_tex,
+            ice: ice_tex,
+            portal: portal_tex,
             skybox_overworld,
             skybox_nether,
         };

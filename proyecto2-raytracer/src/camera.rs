@@ -1,5 +1,6 @@
+//! Simple pinhole camera used to generate primary rays.
+use crate::math::Vec3;
 use crate::ray::Ray;
-use crate::vec3::Vec3;
 
 pub struct Camera {
     pub eye: Vec3,
@@ -9,6 +10,7 @@ pub struct Camera {
 }
 
 impl Camera {
+    /// Generates a ray going through the pixel defined by `(u, v)` in NDC.
     pub fn make_ray(&self, u: f32, v: f32, aspect: f32) -> Ray {
         let fov = self.fov_y.to_radians();
         let scale = (fov * 0.5).tan();
