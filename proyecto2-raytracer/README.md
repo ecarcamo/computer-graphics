@@ -1,4 +1,5 @@
-<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/c266f180-81e8-4bde-8270-200868d24dab" /># Proyecto Raytracer CPU – Diorama Skyblock
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/c266f180-81e8-4bde-8270-200868d24dab" />
+# Proyecto Raytracer CPU – Diorama Skyblock
 
 Este proyecto muestra un pequeño diorama inspirado en Minecraft renderizado íntegramente en CPU usando Rust. El objetivo es exhibir iluminación básica (Phong + reflejos/refracciones), materiales texturizados y dos mundos intercambiables (Overworld/Nether) dentro de una escena tipo skyblock.
 
