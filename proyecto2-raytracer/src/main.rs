@@ -1,4 +1,4 @@
-//! Interactive Minecraft-inspired diorama rendered entirely on the CPU.
+//! Diorama interactivo inspirado en Minecraft renderizado íntegramente en CPU.
 
 mod camera;
 mod geometry;
@@ -13,7 +13,7 @@ use raylib::prelude::*;
 use rendering::{Assets, Skybox, Tex, WorldKind, build_scene, render};
 use std::f32::consts::PI;
 
-/// Loads an image as RGBA8 bytes together with its dimensions.
+/// Carga una imagen como bytes RGBA8 junto con sus dimensiones.
 fn load_texture_rgba(path: &str) -> Option<(Vec<u8>, u32, u32)> {
     if let Ok(img) = image::open(path) {
         let rgba = img.to_rgba8();
@@ -24,7 +24,7 @@ fn load_texture_rgba(path: &str) -> Option<(Vec<u8>, u32, u32)> {
     }
 }
 
-/// Attempts to load a cubemap by trying `.jpg` and `.png` per face.
+/// Intenta cargar un cubemap buscando primero `.jpg` y luego `.png` por cara.
 fn load_cubemap(base: &str) -> Option<Vec<(Vec<u8>, u32, u32)>> {
     let face_names = ["px", "nx", "py", "ny", "pz", "nz"];
     let mut faces = Vec::with_capacity(6);
@@ -40,7 +40,7 @@ fn load_cubemap(base: &str) -> Option<Vec<(Vec<u8>, u32, u32)>> {
     Some(faces)
 }
 
-/// Builds a [`Skybox`] from raw image buffers and an optional tint multiplier.
+/// Construye un [`Skybox`] a partir de buffers crudos aplicando un tinte opcional.
 fn make_skybox<'a>(imgs: &'a [(Vec<u8>, u32, u32)], tint: Vec3) -> Skybox<'a> {
     Skybox {
         px: Tex {

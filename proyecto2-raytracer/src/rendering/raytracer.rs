@@ -1,4 +1,4 @@
-//! Builds the block-based scenes and performs the CPU raytracing loop.
+//! Construye la escena de bloques y ejecuta el trazador de rayos en CPU.
 
 use std::collections::HashSet;
 use std::thread;
@@ -12,7 +12,7 @@ use crate::scene::Intersectable;
 
 type DynObject<'a> = Box<dyn Intersectable + Send + Sync + 'a>;
 
-/// Identifies which themed diorama should be rendered.
+/// Identifica qué diorama (Overworld o Nether) se va a renderizar.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum WorldKind {
     Overworld,
@@ -28,7 +28,7 @@ impl WorldKind {
     }
 }
 
-/// Intersection bookkeeping used during ray traversal.
+/// Datos de intersección utilizados durante el recorrido de rayos.
 struct Hit<'a> {
     t: f32,
     point: Vec3,
@@ -36,7 +36,7 @@ struct Hit<'a> {
     object: &'a dyn Intersectable,
 }
 
-/// Texture handles and optional skyboxes that remain valid while rendering a frame.
+/// Manejadores de texturas y skyboxes que permanecen válidos durante el render.
 #[derive(Copy, Clone)]
 pub struct Assets<'a> {
     pub grass_cover: Option<Tex<'a>>,
@@ -57,13 +57,13 @@ pub struct Assets<'a> {
     pub skybox_nether: Option<Skybox<'a>>,
 }
 
-/// Fully prepared world geometry ready to be rendered.
+/// Geometría ya preparada para renderizar.
 pub struct SceneData<'a> {
     pub objects: Vec<DynObject<'a>>,
     pub skybox: Option<Skybox<'a>>,
 }
 
-/// Allocates either a solid or textured cube and pushes it into the scene list.
+/// Inserta un cubo sólido o texturizado en la lista de objetos.
 fn push_block<'a>(objects: &mut Vec<DynObject<'a>>, min: Vec3, max: Vec3, mat: BlockMaterial<'a>) {
     let inner = SolidBlock {
         min,
@@ -96,7 +96,7 @@ fn push_block<'a>(objects: &mut Vec<DynObject<'a>>, min: Vec3, max: Vec3, mat: B
 }
 
 #[derive(Copy, Clone)]
-/// Bundles texture data and material coefficients for a single block type.
+/// Agrupa la textura y los parámetros de material de un bloque específico.
 struct BlockMaterial<'a> {
     tex: Option<Tex<'a>>,
     albedo: Vec3,
@@ -109,14 +109,14 @@ struct BlockMaterial<'a> {
 }
 
 impl<'a> BlockMaterial<'a> {
-    /// Inserts a full cube for this material at the requested grid coordinates.
+    /// Inserta un cubo completo en las coordenadas indicadas.
     fn place(&self, objects: &mut Vec<DynObject<'a>>, x: i32, y: i32, z: i32) {
         let min = Vec3::new(x as f32 - 0.5, y as f32 - 0.5, z as f32 - 0.5);
         let max = Vec3::new(x as f32 + 0.5, y as f32 + 0.5, z as f32 + 0.5);
         push_block(objects, min, max, *self);
     }
 
-    /// Places only the top slice of a cube (used to layer grass over dirt).
+    /// Coloca solo la “rebanada” superior (para superponer césped sobre tierra).
     fn place_cover(
         &self,
         objects: &mut Vec<DynObject<'a>>,
@@ -132,7 +132,7 @@ impl<'a> BlockMaterial<'a> {
     }
 }
 
-/// Inserts a block if it has not been placed before with the same tag.
+/// Inserta un bloque sólo si no se ha colocado antes con el mismo tag.
 fn place_with_tag<'a>(
     objects: &mut Vec<DynObject<'a>>,
     used: &mut HashSet<(i32, i32, i32, u8)>,
@@ -147,7 +147,7 @@ fn place_with_tag<'a>(
     }
 }
 
-/// Wrapper that inserts a solid block only once at the requested coordinates.
+/// Envoltorio para insertar un bloque sólido una sola vez.
 fn place_block<'a>(
     objects: &mut Vec<DynObject<'a>>,
     used: &mut HashSet<(i32, i32, i32, u8)>,
@@ -159,7 +159,7 @@ fn place_block<'a>(
     place_with_tag(objects, used, mat, x, y, z, 0);
 }
 
-/// Recursive ray-tracing routine with small reflection/refraction depth.
+/// Rutina de trazado recursivo con poca profundidad para reflejos/refracciones.
 fn trace<'a>(
     ray: &Ray,
     objects: &'a [DynObject<'a>],
@@ -196,7 +196,7 @@ fn trace<'a>(
     let hit = closest.unwrap();
     let mat = hit.object.material_at(hit.point);
 
-    // Sombras
+    // Cálculo de sombra simple (shadow ray).
     let bias = 1e-3;
     let shadow_origin = hit.point.add(hit.normal.mul(bias));
     let ldir = light_pos.sub(hit.point).norm();
@@ -215,7 +215,7 @@ fn trace<'a>(
         }
     }
 
-    // Phong local
+    // Iluminación local (Phong).
     let ambient = 0.1;
     let n = hit.normal.norm();
     let l = ldir;
@@ -231,18 +231,18 @@ fn trace<'a>(
         local = local.add(Vec3::new(spec, spec, spec));
     }
 
-    // Emisión
+    // Componentes emisivas.
     local = local.add(mat.emissive);
 
     if depth <= 0 {
         return local;
     }
 
-    // Rayos secundarios
+    // Rayos secundarios para refracción/reflexión.
     let mut accum = Vec3::new(0.0, 0.0, 0.0);
     let mut weight = 1.0;
 
-    // Refracción (si aplica)
+    // Refracción (si aplica).
     if mat.transparency > 0.0 {
         let mut n_out = n;
         let mut eta = 1.0 / mat.ior;
@@ -262,7 +262,7 @@ fn trace<'a>(
         }
     }
 
-    // Reflexión (si aplica)
+    // Reflexión especular (si aplica).
     if mat.reflectivity > 0.0 && weight > 0.0 {
         let rdir = reflect(ray.dir, n).norm();
         let ro = hit.point.add(n.mul(bias));

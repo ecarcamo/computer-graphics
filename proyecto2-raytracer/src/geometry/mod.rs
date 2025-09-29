@@ -1,4 +1,4 @@
-//! Geometry primitives used for tracing (solid cubes, textured variants, etc.).
+//! Primitivas geométricas utilizadas para trazar (cubos sólidos, variantes texturizadas, etc.).
 
 pub mod solid_block;
 pub mod textured_block;
