@@ -1,4 +1,4 @@
-# Proyecto Raytracer CPU – Diorama Skyblock
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/c266f180-81e8-4bde-8270-200868d24dab" /># Proyecto Raytracer CPU – Diorama Skyblock
 
 Este proyecto muestra un pequeño diorama inspirado en Minecraft renderizado íntegramente en CPU usando Rust. El objetivo es exhibir iluminación básica (Phong + reflejos/refracciones), materiales texturizados y dos mundos intercambiables (Overworld/Nether) dentro de una escena tipo skyblock.
 
@@ -48,6 +48,8 @@ Los textos en pantalla resumen los atajos disponibles. Se puede cerrar la ventan
 - `src/camera.rs`: cámara orbital simple que genera los rayos primarios.
 
 El trazado se paraleliza por filas utilizando `std::thread::scope`, por lo que cada CPU disponible procesa un bloque de la imagen.
+
+Vídeo de ejecución https://youtu.be/0fzuT2-U_kM 
 
 ## Notas sobre rendimiento
 
