@@ -10,7 +10,7 @@ mod scene;
 use camera::Camera;
 use math::Vec3;
 use raylib::prelude::*;
-use rendering::{Assets, Skybox, Tex, WorldKind, render};
+use rendering::{Assets, Skybox, Tex, WorldKind, build_scene, render};
 use std::f32::consts::PI;
 
 /// Loads an image as RGBA8 bytes together with its dimensions.
@@ -281,6 +281,28 @@ fn main() {
             .map(|faces| make_skybox(faces, Vec3::new(1.3, 0.4, 0.4)))
     };
 
+    let assets = Assets {
+        grass_cover: grass_cover_tex,
+        dirt: dirt_tex,
+        stone: stone_tex,
+        wood: wood_tex,
+        leaves: leaves_tex,
+        water: water_tex,
+        lava: lava_tex,
+        obsidian: obsidian_tex,
+        glowstone: glowstone_tex,
+        diamond: diamond_tex,
+        iron: iron_tex,
+        chest: chest_tex,
+        ice: ice_tex,
+        portal: portal_tex,
+        skybox_overworld,
+        skybox_nether,
+    };
+
+    let overworld_scene = build_scene(&assets, WorldKind::Overworld);
+    let nether_scene = build_scene(&assets, WorldKind::Nether);
+
     // Cámara orbital y luz
     let mut yaw: f32 = 0.6;
     let mut pitch: f32 = 0.25;
@@ -311,18 +333,28 @@ fn main() {
         if rl.is_key_down(KeyboardKey::KEY_E) {
             radius += 1.5 * dt;
         }
+        let light_speed = 2.5;
         if rl.is_key_down(KeyboardKey::KEY_A) {
-            light_pos.x -= 2.0 * dt;
+            light_pos.x -= light_speed * dt;
         }
         if rl.is_key_down(KeyboardKey::KEY_D) {
-            light_pos.x += 2.0 * dt;
+            light_pos.x += light_speed * dt;
         }
         if rl.is_key_down(KeyboardKey::KEY_W) {
-            light_pos.y += 2.0 * dt;
+            light_pos.z -= light_speed * dt;
         }
         if rl.is_key_down(KeyboardKey::KEY_S) {
-            light_pos.y -= 2.0 * dt;
+            light_pos.z += light_speed * dt;
         }
+        if rl.is_key_down(KeyboardKey::KEY_R) {
+            light_pos.y += light_speed * dt;
+        }
+        if rl.is_key_down(KeyboardKey::KEY_F) {
+            light_pos.y -= light_speed * dt;
+        }
+        light_pos.x = light_pos.x.clamp(-1.0, 6.0);
+        light_pos.z = light_pos.z.clamp(-1.0, 6.0);
+        light_pos.y = light_pos.y.clamp(0.3, 6.5);
         if rl.is_key_pressed(KeyboardKey::KEY_N) {
             world = world.toggle();
         }
@@ -340,33 +372,19 @@ fn main() {
             fov_y: 60.0,
         };
 
-        let assets = Assets {
-            grass_cover: grass_cover_tex,
-            dirt: dirt_tex,
-            stone: stone_tex,
-            wood: wood_tex,
-            leaves: leaves_tex,
-            water: water_tex,
-            lava: lava_tex,
-            obsidian: obsidian_tex,
-            glowstone: glowstone_tex,
-            diamond: diamond_tex,
-            iron: iron_tex,
-            chest: chest_tex,
-            ice: ice_tex,
-            portal: portal_tex,
-            skybox_overworld,
-            skybox_nether,
+        let scene = match world {
+            WorldKind::Overworld => &overworld_scene,
+            WorldKind::Nether => &nether_scene,
         };
 
-        render(&mut frame, fb_w, fb_h, &cam, light_pos, &assets, 4, world);
+        render(&mut frame, fb_w, fb_h, &cam, light_pos, scene, 4);
 
         let _ = tex2d.update_texture(&frame);
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::BLACK);
         d.draw_texture(&tex2d, 0, 0, Color::WHITE);
         d.draw_text(
-            "Flechas: orbitar | Q/E: zoom | WASD: luz | N: cambiar mundo",
+            "Flechas: orbitar | Q/E: zoom | WASD: luz XZ | R/F: luz altura | N: cambiar mundo",
             12,
             12,
             20,

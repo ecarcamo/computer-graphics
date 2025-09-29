@@ -57,6 +57,12 @@ pub struct Assets<'a> {
     pub skybox_nether: Option<Skybox<'a>>,
 }
 
+/// Fully prepared world geometry ready to be rendered.
+pub struct SceneData<'a> {
+    pub objects: Vec<DynObject<'a>>,
+    pub skybox: Option<Skybox<'a>>,
+}
+
 /// Allocates either a solid or textured cube and pushes it into the scene list.
 fn push_block<'a>(objects: &mut Vec<DynObject<'a>>, min: Vec3, max: Vec3, mat: BlockMaterial<'a>) {
     let inner = SolidBlock {
@@ -271,23 +277,8 @@ fn trace<'a>(
 
     local.mul(weight.max(0.0)).add(accum)
 }
-
-// ----------------- escena skyblock -----------------
-/// Builds the current world each frame and writes the shaded RGBA image into `frame`.
-pub fn render<'a>(
-    frame: &mut [u8],
-    w: i32,
-    h: i32,
-    cam: &Camera,
-    light_pos: Vec3,
-    assets: &Assets<'a>,
-    max_depth: i32,
-    world: WorldKind,
-) {
-    let aspect = w as f32 / h as f32;
-    let width = w as usize;
-    let height = h as usize;
-
+/// Generates all blocks for the requested world using the provided assets.
+pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
     let mut objects: Vec<DynObject<'a>> = Vec::new();
 
     // Materiales disponibles
@@ -488,7 +479,7 @@ pub fn render<'a>(
                     if !occupied.contains(&(x, z)) {
                         place_block(&mut objects, &mut used, dirt_mat, x, 0, z);
                         if !no_cover.contains(&(x, z)) {
-                            grass_cover_mat.place_cover(&mut objects, x, 0, z, 0.08);
+                            grass_cover_mat.place_cover(&mut objects, x, 0, z, 0.18);
                         }
                     }
                 }
@@ -668,9 +659,26 @@ pub fn render<'a>(
     }
 
     let skybox = match world {
-        WorldKind::Overworld => assets.skybox_overworld.as_ref(),
-        WorldKind::Nether => assets.skybox_nether.as_ref(),
+        WorldKind::Overworld => assets.skybox_overworld,
+        WorldKind::Nether => assets.skybox_nether,
     };
+
+    SceneData { objects, skybox }
+}
+
+/// Raytraces the provided scene and writes the shaded RGBA image into `frame`.
+pub fn render<'a>(
+    frame: &mut [u8],
+    w: i32,
+    h: i32,
+    cam: &Camera,
+    light_pos: Vec3,
+    scene: &SceneData<'a>,
+    max_depth: i32,
+) {
+    let aspect = w as f32 / h as f32;
+    let width = w as usize;
+    let height = h as usize;
 
     let threads = thread::available_parallelism()
         .map(|n| n.get())
@@ -678,7 +686,8 @@ pub fn render<'a>(
         .min(height.max(1));
     let rows_per_chunk = (height + threads - 1) / threads;
     let pixels_per_row = width * 4;
-    let objects_ref: &[DynObject<'a>] = &objects;
+    let objects_ref: &[DynObject<'a>] = &scene.objects;
+    let skybox = scene.skybox.as_ref();
 
     thread::scope(|scope| {
         let mut start_row = 0usize;
