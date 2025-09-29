@@ -1,10 +1,10 @@
-//! Material definitions and the `Intersectable` trait shared across primitives.
+//! Definición de materiales y la interfaz `Intersectable` usada por las primitivas.
 
 use crate::math::Vec3;
 use crate::ray::Ray;
 
 #[derive(Copy, Clone)]
-/// Physically-motivated parameters sampled per shading point.
+/// Parámetros físicos muestreados en cada punto de sombreado.
 pub struct MaterialParams {
     pub albedo: Vec3,           // Color base (tras textura)
     pub specular_strength: f32, // [0..1]
@@ -15,7 +15,7 @@ pub struct MaterialParams {
     pub emissive: Vec3,         // luz propia
 }
 
-/// Common interface for any object that can be intersected by a ray.
+/// Interfaz común para cualquier objeto intersectable por un rayo.
 pub trait Intersectable: Send + Sync {
     fn intersect(&self, ray: &Ray) -> Option<f32>;
     fn normal_at(&self, point: Vec3) -> Vec3;

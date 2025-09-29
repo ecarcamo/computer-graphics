@@ -1,4 +1,4 @@
-//! Rendering pipeline and lighting helpers.
+//! Núcleo del trazador y utilidades de iluminación.
 
 pub mod lighting;
 pub mod raytracer;

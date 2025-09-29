@@ -1,4 +1,4 @@
-//! Scene-level data structures (materials, traits for hittable objects).
+//! Estructuras de escena: materiales e interfaz para objetos intersectables.
 
 pub mod material;
 

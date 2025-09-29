@@ -1,4 +1,4 @@
-//! Infinite plane primitive (currently unused) retained for experimentation.
+//! Plano infinito (actualmente sin uso) reservado para experimentos.
 
 use crate::math::Vec3;
 use crate::ray::Ray;

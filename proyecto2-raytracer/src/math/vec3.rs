@@ -1,4 +1,4 @@
-//! Minimal 3D vector helper used across camera, lighting, and geometry code.
+//! Pequeña utilidad de vectores 3D usada en cámara, iluminación y geometría.
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Vec3 {

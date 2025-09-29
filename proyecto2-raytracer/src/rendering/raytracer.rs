@@ -277,7 +277,7 @@ fn trace<'a>(
 
     local.mul(weight.max(0.0)).add(accum)
 }
-/// Generates all blocks for the requested world using the provided assets.
+/// Genera todos los bloques del mundo actual usando los assets disponibles.
 pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
     let mut objects: Vec<DynObject<'a>> = Vec::new();
 
@@ -658,7 +658,7 @@ pub fn build_scene<'a>(assets: &Assets<'a>, world: WorldKind) -> SceneData<'a> {
     SceneData { objects, skybox }
 }
 
-/// Raytraces the provided scene and writes the shaded RGBA image into `frame`.
+/// Traza la escena resultante y escribe el color final (RGBA) dentro de `frame`.
 pub fn render<'a>(
     frame: &mut [u8],
     w: i32,

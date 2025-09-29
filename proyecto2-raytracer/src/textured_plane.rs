@@ -1,4 +1,4 @@
-//! Optional infinite textured plane primitive (currently not used in the diorama).
+//! Plano infinito texturizado opcional (no se usa en el diorama principal).
 
 use crate::math::Vec3;
 use crate::ray::Ray;

@@ -1,4 +1,4 @@
-//! Lighting utilities: procedural sky, reflection helpers, and skybox sampling.
+//! Utilidades de iluminación: cielo procedural, reflejos y muestreo de skybox.
 
 use crate::math::Vec3;
 

@@ -1,4 +1,4 @@
-//! Math utilities (vectors, rays, etc.)
+//! Utilidades matemáticas (vectores, productos, etc.).
 
 pub mod vec3;
 

@@ -1,11 +1,11 @@
-//! Textured cube primitive that wraps a `SolidBlock` with a texture atlas.
+//! Variante texturizada que envuelve un `SolidBlock` con un atlas.
 
 use super::solid_block::SolidBlock;
 use crate::math::Vec3;
 use crate::ray::Ray;
 use crate::scene::{Intersectable, MaterialParams};
 
-/// Cube that samples a texture atlas per face.
+/// Cubo que muestrea un atlas de textura por cara.
 pub struct TexturedBlock<'a> {
     pub inner: SolidBlock,
     pub pixels: &'a [u8], // RGBA8

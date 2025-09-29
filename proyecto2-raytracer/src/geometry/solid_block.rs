@@ -1,11 +1,11 @@
-//! Axis-aligned cube primitive used for building Minecraft-style blocks.
+//! Cubo alineado a los ejes usado para construir bloques estilo Minecraft.
 
 use crate::math::Vec3;
 use crate::ray::Ray;
 use crate::scene::{Intersectable, MaterialParams};
 
 #[derive(Copy, Clone)]
-/// Opaque cube used for regular (non-textured) blocks.
+/// Cubo opaco utilizado para bloques sin textura.
 pub struct SolidBlock {
     pub min: Vec3,
     pub max: Vec3,
