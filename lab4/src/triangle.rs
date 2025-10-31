@@ -31,30 +31,42 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 
                 let light_dir2 = Vec3::new(0.5, -0.5, -0.5).normalize();
                 let intensity2 = dot(&normal, &light_dir2).max(0.0);
+                
+                let light_dir3 = Vec3::new(-0.3, 0.3, -0.5).normalize();
+                let intensity3 = dot(&normal, &light_dir3).max(0.0);
 
-                let ambient = 0.2;
-                let diffuse1 = 0.6 * intensity1;
-                let diffuse2 = 0.3 * intensity2;
-                let light_intensity = ambient + diffuse1 + diffuse2;
+                let ambient = 0.35;
+                let diffuse1 = 0.5 * intensity1;
+                let diffuse2 = 0.25 * intensity2;
+                let diffuse3 = 0.15 * intensity3;
+                let light_intensity = (ambient + diffuse1 + diffuse2 + diffuse3).min(1.2);
 
-                let base_color = if avg_original_pos.y > 0.3 && avg_original_pos.z < -1.0 {
-                    Color::new(60, 140, 150)
-                } else if avg_original_pos.y < -0.8 {
-                    Color::new(220, 130, 60)
-                } else if avg_original_pos.z > 0.5 && avg_original_pos.x.abs() < 0.5 {
-                    Color::new(240, 140, 80)
-                } else if avg_original_pos.z < -1.5 && normal.y.abs() < 0.3 {
-                    Color::new(200, 80, 80)
-                } else if avg_original_pos.x.abs() > 0.8 && avg_original_pos.z > -0.5 {
-                    Color::new(60, 140, 150)
-                } else if avg_original_pos.y < -0.3 && avg_original_pos.y > -0.8 {
-                    Color::new(240, 140, 80)
-                } else if normal.y > 0.6 {
-                    Color::new(100, 120, 140)
-                } else if avg_original_pos.z > 0.0 {
-                    Color::new(70, 80, 90)
+                let black_metal = Color::new(20, 20, 25);
+                let dark_metal = Color::new(40, 40, 45);
+                let dark_red = Color::new(120, 20, 20);
+                let mid_red = Color::new(180, 40, 40);
+                let bright_red = Color::new(220, 60, 60);
+                let light_red = Color::new(255, 80, 80);
+                
+                let y_normalized = (avg_original_pos.y + 1.5) / 3.0;
+                
+                let base_color = if avg_original_pos.y < -0.8 {
+                    black_metal
+                } else if avg_original_pos.y < -0.5 {
+                    dark_metal
+                } else if avg_original_pos.y < -0.2 {
+                    dark_red
+                } else if avg_original_pos.y > 0.5 && avg_original_pos.z < -0.5 {
+                    light_red
+                } else if avg_original_pos.z > 0.3 {
+                    mid_red
+                } else if normal.y > 0.7 {
+                    bright_red
+                } else if normal.y < -0.6 {
+                    dark_metal
                 } else {
-                    Color::new(100, 110, 120)
+                    let blend_y = y_normalized.clamp(0.0, 1.0);
+                    mid_red.lerp(&bright_red, blend_y)
                 };
                 let lit_color = base_color * light_intensity;
 
