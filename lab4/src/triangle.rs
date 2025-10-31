@@ -11,6 +11,8 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
 
     let light_dir = Vec3::new(0.0, 0.0, -1.0);
 
+    let avg_original_pos = (v1.position + v2.position + v3.position) / 3.0;
+
     let triangle_area = edge_function(&a, &b, &c);
 
     for y in min_y..=max_y {
@@ -25,12 +27,35 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 let normal = v1.transformed_normal;
                 let normal = normal.normalize();
 
-                let intensity = dot(&normal, &light_dir).max(0.0);
-                let ambient = 0.3;
-                let diffuse = 0.7;
-                let light_intensity = ambient + diffuse * intensity;
+                let intensity1 = dot(&normal, &light_dir).max(0.0);
+                
+                let light_dir2 = Vec3::new(0.5, -0.5, -0.5).normalize();
+                let intensity2 = dot(&normal, &light_dir2).max(0.0);
 
-                let base_color = Color::new(100, 150, 200);
+                let ambient = 0.2;
+                let diffuse1 = 0.6 * intensity1;
+                let diffuse2 = 0.3 * intensity2;
+                let light_intensity = ambient + diffuse1 + diffuse2;
+
+                let base_color = if avg_original_pos.y > 0.3 && avg_original_pos.z < -1.0 {
+                    Color::new(60, 140, 150)
+                } else if avg_original_pos.y < -0.8 {
+                    Color::new(220, 130, 60)
+                } else if avg_original_pos.z > 0.5 && avg_original_pos.x.abs() < 0.5 {
+                    Color::new(240, 140, 80)
+                } else if avg_original_pos.z < -1.5 && normal.y.abs() < 0.3 {
+                    Color::new(200, 80, 80)
+                } else if avg_original_pos.x.abs() > 0.8 && avg_original_pos.z > -0.5 {
+                    Color::new(60, 140, 150)
+                } else if avg_original_pos.y < -0.3 && avg_original_pos.y > -0.8 {
+                    Color::new(240, 140, 80)
+                } else if normal.y > 0.6 {
+                    Color::new(100, 120, 140)
+                } else if avg_original_pos.z > 0.0 {
+                    Color::new(70, 80, 90)
+                } else {
+                    Color::new(100, 110, 120)
+                };
                 let lit_color = base_color * light_intensity;
 
                 let depth = a.z * w1 + b.z * w2 + c.z * w3;

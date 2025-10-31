@@ -122,11 +122,12 @@ fn main() {
 
     window.limit_update_rate(Some(Duration::from_millis(16)));
 
-    framebuffer.set_background_color(0x00333355);
+    framebuffer.set_background_color(0x001a1a2e);
 
     let mut translation = Vec3::new(400.0, 300.0, 0.0);
-    let mut rotation = Vec3::new(0.0, 0.0, 0.0);
+    let mut rotation = Vec3::new(0.3, 0.5, 0.0);
     let mut scale = 150.0f32;
+    let mut auto_rotate = true;
 
     let obj = Obj::load("lab3-nave.obj").expect("Failed to load obj");
     let vertex_arrays = obj.get_vertex_array();
@@ -138,7 +139,11 @@ fn main() {
             break;
         }
 
-        handle_input(&window, &mut translation, &mut rotation, &mut scale);
+        handle_input(&window, &mut translation, &mut rotation, &mut scale, &mut auto_rotate);
+
+        if auto_rotate {
+            rotation.y += 0.02;
+        }
 
         framebuffer.clear();
 
@@ -156,7 +161,7 @@ fn main() {
     }
 }
 
-fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, scale: &mut f32) {
+fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, scale: &mut f32, auto_rotate: &mut bool) {
     if window.is_key_down(Key::Right) {
         translation.x += 10.0;
     }
@@ -177,20 +182,29 @@ fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, sc
     }
     if window.is_key_down(Key::Q) {
         rotation.x -= PI / 10.0;
+        *auto_rotate = false;
     }
     if window.is_key_down(Key::W) {
         rotation.x += PI / 10.0;
+        *auto_rotate = false;
     }
     if window.is_key_down(Key::E) {
         rotation.y -= PI / 10.0;
+        *auto_rotate = false;
     }
     if window.is_key_down(Key::R) {
         rotation.y += PI / 10.0;
+        *auto_rotate = false;
     }
     if window.is_key_down(Key::T) {
         rotation.z -= PI / 10.0;
+        *auto_rotate = false;
     }
     if window.is_key_down(Key::Y) {
         rotation.z += PI / 10.0;
+        *auto_rotate = false;
+    }
+    if window.is_key_down(Key::Space) {
+        *auto_rotate = !*auto_rotate;
     }
 }
