@@ -89,13 +89,12 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
 
     // Fragment Processing Stage
     for fragment in fragments {
-        let x = fragment.position.x;
-        let y = fragment.position.y;
-
-        if x >= 0.0 && y >= 0.0 && x < framebuffer.width as f32 && y < framebuffer.height as f32 {
+        let x = fragment.position.x as usize;
+        let y = fragment.position.y as usize;
+        if x < framebuffer.width && y < framebuffer.height {
             let color = fragment.color.to_hex();
             framebuffer.set_current_color(color);
-            framebuffer.point(x as usize, y as usize);
+            framebuffer.point(x, y, fragment.depth);
         }
     }
 }
