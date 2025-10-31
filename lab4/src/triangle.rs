@@ -50,19 +50,20 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 
                 let y_normalized = (avg_original_pos.y + 1.5) / 3.0;
                 
-                let base_color = if avg_original_pos.y < -0.2 {
+                let base_color = if avg_original_pos.y > 0.3 {
                     black_metal
-                } else if normal.y < -0.5 {
+                } else if avg_original_pos.y < -0.3 {
+                    black_metal
+                } else if normal.y > 0.6 {
                     dark_metal
-                } else if avg_original_pos.y > 0.5 && avg_original_pos.z < -0.5 {
+                } else if normal.y < -0.6 {
+                    dark_metal
+                } else if avg_original_pos.y.abs() < 0.15 {
                     light_red
-                } else if avg_original_pos.z > 0.3 {
-                    mid_red
-                } else if normal.y > 0.7 {
-                    bright_red
+                } else if avg_original_pos.y > 0.0 {
+                    mid_red.lerp(&bright_red, 0.7)
                 } else {
-                    let blend_y = y_normalized.clamp(0.0, 1.0);
-                    mid_red.lerp(&bright_red, blend_y)
+                    mid_red.lerp(&bright_red, 0.3)
                 };
                 let lit_color = base_color * light_intensity;
 
