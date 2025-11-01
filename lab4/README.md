@@ -100,12 +100,3 @@ Esto confirma que el modelo se está renderizando correctamente.
 ✅ Dibujar todos los triángulos
 ✅ Modelo centrado en pantalla
 ✅ Tamaño razonable y visible
-
-## Diferencias con el Esqueleto en C++
-
-El esqueleto del lab usaba SDL2, aquí usamos:
-- **minifb** en lugar de SDL2 (más simple en Rust)
-- **nalgebra-glm** para matemáticas de vectores/matrices
-- **tobj** para cargar OBJ files
-
-La lógica es idéntica, solo adaptada a Rust.
