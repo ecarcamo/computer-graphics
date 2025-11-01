@@ -2,6 +2,12 @@
 
 Renderizador 3D de software en Rust que carga y visualiza modelos OBJ.
 
+## Vista previa
+
+![Vista previa del modelo](screenshot-2025-10-31_17-57-57.png)
+
+La imagen anterior es una captura directa del rasterizador en ejecución.
+
 ## Características Implementadas
 
 ✅ **Pipeline Gráfico Completo:**
@@ -19,9 +25,9 @@ Renderizador 3D de software en Rust que carga y visualiza modelos OBJ.
 - Transformaciones 3D completas (traslación, rotación, escala)
 
 ✅ **Modelo:**
-- Tu nave espacial: **12,692 triángulos**, **38,076 vértices**
-- Color: **Cyan brillante** para máxima visibilidad
-- Fondo: **Negro** para máximo contraste
+- Nave espacial: **12,692 triángulos**, **38,076 vértices**
+- Materiales y colores tomados de `lab3-nave.mtl`
+- Fondo oscuro para resaltar el modelo
 
 ## Ejecutar
 
@@ -45,24 +51,23 @@ cargo run
 - **Posición:** Centro de pantalla (400, 300)
 - **Escala:** 200x
 - **Rotación inicial:** 30° en X, 45° en Y para mejor vista
-- **Color:** Cyan (#00FFFF) con 60% de luz ambiente
+- **Iluminación:** Ambiente 60% + difusa 40%; colores desde el MTL
 
 ## Estructura del Código
 
 ```
 src/
 ├── main.rs         - Loop principal y transformaciones
-├── lib.rs          - Exporta todos los módulos
-├── color.rs        - Sistema de colores RGB
-├── framebuffer.rs  - Buffer de píxeles + Z-buffer
+├── color.rs        - Utilidades de color RGB
+├── framebuffer.rs  - Framebuffer de color y Z-buffer
 ├── vertex.rs       - Estructura de vértices
-├── fragment.rs     - Fragmentos post-rasterización
+├── fragment.rs     - Fragmentos posteriores a rasterización
 ├── triangle.rs     - Rasterización baricéntrica + flat shading
-├── obj.rs          - Cargador de archivos OBJ
-└── shaders.rs      - Vertex shader con transformaciones
-
+├── line.rs         - Dibujo de líneas (debug/utilidades)
+├── obj.rs          - Cargador de archivos OBJ/MTL
+└── shaders.rs      - Vertex shader y transformaciones
 bin/
-└── test_triangle.rs - Programa de prueba (triángulo amarillo)
+└── test_triangle.rs - Programa de prueba (triángulo)
 ```
 
 ## Debug Info
