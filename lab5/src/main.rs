@@ -130,7 +130,7 @@ fn main() {
     window.set_position(500, 300);
     window.update();
 
-    framebuffer.set_background_color(0x333355);
+    framebuffer.set_background_color(0x030314);
 
     // Para compatibilidad con tu manejador de input
     let mut translation = Vec3::new(0.0, 0.0, 0.0);

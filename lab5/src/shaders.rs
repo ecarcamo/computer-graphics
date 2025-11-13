@@ -53,50 +53,76 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
 
 /// "Sol" con varias capas de color
 fn star_color(p: Vec3, time: f32) -> Color {
+    // distancia al centro
     let r = (p.x * p.x + p.y * p.y + p.z * p.z).sqrt();
 
+    // Capa 1: gradiente radial (centro blanco-amarillo, borde naranja)
     let base = if r < 0.4 {
-        Color::new(255, 255, 230) // casi blanco en el centro
+        Color::new(255, 250, 220) // centro muy brillante
     } else if r < 0.8 {
-        Color::new(255, 220, 120) // amarillito
+        Color::new(255, 220, 120) // medio amarillo
     } else {
-        Color::new(255, 120, 40)  // borde naranja/rojizo
+        Color::new(255, 150, 40)  // borde más naranja
     };
 
-    let swirl = ((p.x * 8.0 + time * 2.0).sin()
-               + (p.y * 10.0 - time * 1.5).cos()
-               + (p.z * 12.0 + time).sin()) * 0.5;
+    // Capa 2: “granulación” solar (manchitas claras/osc)
+    let granulation = (p.x * 20.0 + time * 4.0).sin()
+                    * (p.y * 24.0 - time * 3.0).cos()
+                    * (p.z * 18.0 + time * 2.0).sin();
+    let mut color = base;
 
-    if swirl > 0.4 {
-        Color::new(255, 255, 255)
-    } else if swirl < -0.4 {
-        Color::new(200, 70, 20)
-    } else {
-        base
+    if granulation > 0.3 {
+        // células más calientes
+        color = Color::new(255, 255, 240);
+    } else if granulation < -0.3 {
+        // zonas ligeramente más frías
+        color = Color::new(220, 130, 40);
     }
+
+    // Capa 3: ligera “oscurecimiento de borde” (limb darkening)
+    let edge_factor = (1.0 - r).clamp(0.0, 1.0); // 1 en centro, 0 en borde
+    let darken = 0.6 + 0.4 * edge_factor;       // 0.6 en borde, 1 en centro
+
+    Color::new(
+        (color.r as f32 * darken) as u8,
+        (color.g as f32 * darken) as u8,
+        (color.b as f32 * darken) as u8,
+    )
 }
 
 fn rocky_color(p: Vec3, time: f32) -> Color {
-    let mut color = Color::new(120, 70, 40); // marrón roca
+    let latitude = p.y;          // -1..1
+    let longitude = p.z;         // aproximación
 
-    let latitude = p.y; // -1 a 1
-    if latitude.abs() > 0.6 {
-        color = Color::new(200, 180, 160);
+    // Capa 1: océanos azules
+    let mut color = Color::new(20, 60, 150);
+
+    // Capa 2: continentes (ruido senoidal)
+    let continents = (p.x * 4.0 + time * 0.2).sin()
+                   + (p.z * 3.0 - time * 0.1).cos();
+    if continents > 0.5 {
+        // tierra verde
+        color = Color::new(30, 120, 40);
+    }
+    if continents > 1.2 {
+        // montañas marrones
+        color = Color::new(120, 90, 50);
     }
 
-    let bands = (p.x * 4.0 + time * 0.3).sin() + (p.z * 3.0).cos();
-    if bands > 1.0 {
-        color = Color::new(170, 100, 60);
+    // Capa 3: polos helados
+    if latitude > 0.7 || latitude < -0.7 {
+        color = Color::new(230, 240, 255); // blanco/azulado
     }
 
-    let crater_center = Vec3::new(0.4, 0.1, 0.0);
-    let dx = p.x - crater_center.x;
-    let dy = p.y - crater_center.y;
-    let dz = p.z - crater_center.z;
-    let d = (dx * dx + dy * dy + dz * dz).sqrt();
-
-    if d < 0.35 {
-        color = Color::new(60, 40, 30);
+    // Capa 4: “nubes” suaves
+    let clouds = (p.x * 7.0 + p.y * 5.0 + time * 0.4).sin();
+    if clouds > 0.8 {
+        // mezclar con blanco
+        color = Color::new(
+            ((color.r as f32 * 0.5) + 127.0) as u8,
+            ((color.g as f32 * 0.5) + 127.0) as u8,
+            ((color.b as f32 * 0.5) + 127.0) as u8,
+        );
     }
 
     color
@@ -105,27 +131,33 @@ fn rocky_color(p: Vec3, time: f32) -> Color {
 fn gas_giant_color(p: Vec3, time: f32) -> Color {
     let latitude = p.y; // -1..1
 
-    let mut color = Color::new(200, 160, 120);
+    // Capa 1: base crema
+    let mut color = Color::new(210, 180, 140);
 
-    let bands = (latitude * 10.0 + time * 0.5).sin(); // [-1,1]
-    if bands > 0.0 {
-        color = Color::new(230, 210, 180); // banda clara
-    } else {
-        color = Color::new(160, 120, 90);  // banda oscura
+    // Capa 2: bandas horizontales (ancho variable)
+    let band_pattern = (latitude * 10.0 + time * 0.3).sin()
+                     + (latitude * 4.0).sin() * 0.5;
+    if band_pattern > 0.5 {
+        color = Color::new(235, 220, 200); // banda clara
+    } else if band_pattern < -0.5 {
+        color = Color::new(170, 120, 90);  // banda oscura
     }
 
-    let swirl = ((p.x * 6.0 + time * 0.3).sin() * (p.z * 6.0 - time * 0.4).cos()).abs();
-    if swirl > 0.6 {
-        color = Color::new(240, 230, 210); // nubecitas claras
+    // Capa 3: turbulencias finas
+    let swirl = ((p.x * 8.0 + time * 0.3).sin()
+               * (p.z * 6.0 - time * 0.2).cos()).abs();
+    if swirl > 0.7 {
+        color = Color::new(240, 230, 215); // nubecitas muy claras
     }
 
-    let storm_center = Vec3::new(0.3, -0.2, 0.0);
+    // Capa 4: Gran Mancha Roja
+    let storm_center = Vec3::new(0.4, -0.2, 0.1);
     let dx = p.x - storm_center.x;
-    let dy = p.y - storm_center.y;
+    let dy = (p.y - storm_center.y) * 0.6; // aplastada verticalmente
     let dz = p.z - storm_center.z;
-    let d = (dx * dx + (dy * 0.5) * (dy * 0.5) + dz * dz).sqrt(); // un poco “aplastada” en Y
+    let d = (dx * dx + dy * dy + dz * dz).sqrt();
 
-    if d < 0.4 {
+    if d < 0.35 {
         color = Color::new(200, 80, 50);
     }
 
@@ -133,17 +165,15 @@ fn gas_giant_color(p: Vec3, time: f32) -> Color {
 }
 
 
-fn moon_color(p: Vec3, _time: f32) -> Color {
-    // Base gris
-    let mut color = Color::new(180, 180, 180);
 
-    // “manchas” oscuras tipo mares lunares
+fn moon_color(p: Vec3, _time: f32) -> Color {
+    let mut color = Color::new(200, 200, 200); // gris claro
+
     let noise = (p.x * 7.0).sin() * (p.z * 5.0).cos();
     if noise > 0.4 {
-        color = Color::new(120, 120, 120);
+        color = Color::new(150, 150, 150);
     }
 
-    // Cráter grande
     let crater_center = Vec3::new(-0.3, 0.1, 0.2);
     let dx = p.x - crater_center.x;
     let dy = p.y - crater_center.y;
@@ -151,7 +181,7 @@ fn moon_color(p: Vec3, _time: f32) -> Color {
     let d = (dx * dx + dy * dy + dz * dz).sqrt();
 
     if d < 0.25 {
-        color = Color::new(80, 80, 80);
+        color = Color::new(100, 100, 100);
     }
 
     color
