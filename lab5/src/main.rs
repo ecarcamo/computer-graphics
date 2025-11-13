@@ -34,6 +34,13 @@ pub enum PlanetShader {
     RingRock,   // "piedritas" de los anillos
 }
 
+const STAR: usize  = 0;
+const LAVA: usize  = 1;
+const ROCKY: usize = 2;
+const MOON: usize  = 3;
+const GAS: usize   = 4;
+const ICE: usize   = 5;
+
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -127,15 +134,36 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
     }
 }
 
-
 fn main() {
-
     let window_width = 900;
     let window_height = 600;
     let framebuffer_width = 900;
     let framebuffer_height = 600;
     let frame_delay = Duration::from_millis(16);
 
+    // Escalas base de los planetas
+    let sun_scale   = 50.0;
+    let rocky_scale = 35.0;
+    let gas_scale   = 45.0;
+    let moon_scale  = 15.0;
+
+    // Offset global del sistema (para mover con WASD)
+    let mut center_offset = Vec3::new(0.0, 0.0, 0.0);
+
+    // Controles por planeta
+    let mut selected_planet: usize = STAR;     // 0 por defecto (sol)
+    let mut extra_rot   = [0.0f32; 6];         // rotación extra en Y
+    let mut extra_scale = [1.0f32; 6];         // escala multiplicativa
+
+    // Tiempo acumulado
+    let mut base_time = 0.0f32;
+    let mut last_instant = Instant::now();
+
+    // Toggle de pausa (P)
+    let mut paused = false;
+    let mut last_p_state = false;
+
+    // Framebuffer y ventana
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     let mut window = Window::new(
         "Rust Graphics - Lab 5 - Solar System",
@@ -150,36 +178,49 @@ fn main() {
 
     framebuffer.set_background_color(0x030314);
 
-    // Para compatibilidad con tu manejador de input
-    let mut translation = Vec3::new(0.0, 0.0, 0.0);
-    let mut rotation = Vec3::new(0.0, 0.0, 0.0);
-    let mut scale = 100.0f32;
-
     // Cargamos la esfera
     let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load sphere");
     let vertex_arrays = obj.get_vertex_array();
-    let start_time = Instant::now();
 
-    // Centro de la “cámara”
-    let center = Vec3::new(400.0, 300.0, 0.0);
-
-    // Escalas reducidas (zoom out)
-    let sun_scale   = 50.0;
-    let rocky_scale = 35.0;
-    let gas_scale   = 45.0;
-    let moon_scale  = 15.0;
+    // Centro base de la “cámara”
+    let center = Vec3::new(450.0, 300.0, 0.0);
 
     let mut screenshot_taken = false;
 
     while window.is_open() {
-        let elapsed = start_time.elapsed();
-        let time_sec = elapsed.as_secs_f32();
+        // ===================== TIEMPO + PAUSA (P) ======================
+        let now = Instant::now();
+        let dt = now.duration_since(last_instant).as_secs_f32();
+        last_instant = now;
 
+        // edge detection de la tecla P (toggle)
+        let p_down = window.is_key_down(Key::P);
+        if p_down && !last_p_state {
+            paused = !paused;
+            println!("PAUSA = {}", paused);
+        }
+        last_p_state = p_down;
+
+        if !paused {
+            base_time += dt;
+        }
+        let time_sec = base_time;
+
+        // Salir con ESC
         if window.is_key_down(Key::Escape) {
             break;
         }
 
-        handle_input(&window, &mut translation, &mut rotation, &mut scale);
+        // ===================== CONTROLES DE ENTRADA ======================
+        handle_input(
+            &window,
+            &mut center_offset,
+            &mut selected_planet,
+            &mut extra_rot,
+            &mut extra_scale,
+        );
+
+        let center_pos = center + center_offset;
 
         framebuffer.clear();
 
@@ -187,9 +228,9 @@ fn main() {
         // ===============    SOL (CENTRADO)    ================
         // ====================================================
         let star_model = create_model_matrix(
-            center,
-            sun_scale,
-            Vec3::new(0.0, time_sec * 0.2, 0.0),
+            center_pos,
+            sun_scale * extra_scale[STAR],
+            Vec3::new(0.0, time_sec * 0.2 + extra_rot[STAR], 0.0),
         );
 
         let star_uniforms = Uniforms {
@@ -206,13 +247,13 @@ fn main() {
         let lava_orbit_radius = 90.0;
         let lava_angle = time_sec * 0.7;
 
-        let lava_x = center.x + lava_orbit_radius * lava_angle.cos();
-        let lava_y = center.y + lava_orbit_radius * lava_angle.sin();
+        let lava_x = center_pos.x + lava_orbit_radius * lava_angle.cos();
+        let lava_y = center_pos.y + lava_orbit_radius * lava_angle.sin();
 
         let lava_model = create_model_matrix(
             Vec3::new(lava_x, lava_y, 0.0),
-            25.0,
-            Vec3::new(0.0, time_sec * 0.9, 0.0),
+            25.0 * extra_scale[LAVA],
+            Vec3::new(0.0, time_sec * 0.9 + extra_rot[LAVA], 0.0),
         );
 
         let lava_uniforms = Uniforms {
@@ -229,13 +270,13 @@ fn main() {
         let rocky_orbit_radius = 140.0;
         let rocky_angle = time_sec * 0.4;
 
-        let rocky_x = center.x + rocky_orbit_radius * rocky_angle.cos();
-        let rocky_y = center.y + rocky_orbit_radius * rocky_angle.sin();
+        let rocky_x = center_pos.x + rocky_orbit_radius * rocky_angle.cos();
+        let rocky_y = center_pos.y + rocky_orbit_radius * rocky_angle.sin();
 
         let rocky_model = create_model_matrix(
             Vec3::new(rocky_x, rocky_y, 0.0),
-            rocky_scale,
-            Vec3::new(0.0, time_sec * 0.6, 0.0),
+            rocky_scale * extra_scale[ROCKY],
+            Vec3::new(0.0, time_sec * 0.6 + extra_rot[ROCKY], 0.0),
         );
 
         let rocky_uniforms = Uniforms {
@@ -257,8 +298,8 @@ fn main() {
 
         let moon_model = create_model_matrix(
             Vec3::new(moon_x, moon_y, 0.0),
-            moon_scale,
-            Vec3::new(0.0, time_sec * 0.8, 0.0),
+            moon_scale * extra_scale[MOON],
+            Vec3::new(0.0, time_sec * 0.8 + extra_rot[MOON], 0.0),
         );
 
         let moon_uniforms = Uniforms {
@@ -275,13 +316,13 @@ fn main() {
         let gas_orbit = 220.0;
         let gas_angle = time_sec * 0.25;
 
-        let gas_x = center.x + gas_orbit * gas_angle.cos();
-        let gas_y = center.y + gas_orbit * gas_angle.sin();
+        let gas_x = center_pos.x + gas_orbit * gas_angle.cos();
+        let gas_y = center_pos.y + gas_orbit * gas_angle.sin();
 
         let gas_model = create_model_matrix(
             Vec3::new(gas_x, gas_y, 0.0),
-            gas_scale,
-            Vec3::new(0.0, time_sec * 0.3, 0.0),
+            gas_scale * extra_scale[GAS],
+            Vec3::new(0.0, time_sec * 0.3 + extra_rot[GAS], 0.0),
         );
 
         let gas_uniforms = Uniforms {
@@ -295,8 +336,8 @@ fn main() {
         // ====================================================
         // ============ SISTEMA DE ANILLOS (ROCAS) ============
         // ====================================================
-        let ring_radius = gas_scale * 2.1;
-        let ring_scale = 5.0;
+        let ring_radius = gas_scale * 2.1 * extra_scale[GAS];
+        let ring_scale = 5.0 * extra_scale[GAS];
         let ring_count = 12;
 
         for i in 0..ring_count {
@@ -326,13 +367,13 @@ fn main() {
         let ice_orbit_radius = 300.0;
         let ice_angle = time_sec * 0.18;
 
-        let ice_x = center.x + ice_orbit_radius * ice_angle.cos();
-        let ice_y = center.y + ice_orbit_radius * ice_angle.sin();
+        let ice_x = center_pos.x + ice_orbit_radius * ice_angle.cos();
+        let ice_y = center_pos.y + ice_orbit_radius * ice_angle.sin();
 
         let ice_model = create_model_matrix(
             Vec3::new(ice_x, ice_y, 0.0),
-            40.0,
-            Vec3::new(0.0, time_sec * 0.35, 0.0),
+            40.0 * extra_scale[ICE],
+            Vec3::new(0.0, time_sec * 0.35 + extra_rot[ICE], 0.0),
         );
 
         let ice_uniforms = Uniforms {
@@ -348,6 +389,7 @@ fn main() {
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();
 
+        // Captura automática solo una vez
         if !screenshot_taken {
             save_screenshot(
                 &framebuffer.buffer,
@@ -358,48 +400,93 @@ fn main() {
             screenshot_taken = true;
             println!("Captura guardada como planetas.png");
         }
-        std::thread::sleep(frame_delay);
-    }
 
+        std::thread::sleep(frame_delay);
+
+        // ===================== SCREENSHOT MANUAL (O) =====================
+        if window.is_key_down(Key::O) {
+            let filename = format!("screenshot_{}.png", base_time as u32);
+            save_screenshot(
+                &framebuffer.buffer,
+                framebuffer_width,
+                framebuffer_height,
+                &filename,
+            );
+            println!("Screenshot guardado: {}", filename);
+            std::thread::sleep(Duration::from_millis(200)); // evita repetir muchas capturas
+        }
+
+    }
 }
 
 
-
-fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, scale: &mut f32) {
-    if window.is_key_down(Key::Right) {
-        translation.x += 10.0;
-    }
-    if window.is_key_down(Key::Left) {
-        translation.x -= 10.0;
-    }
-    if window.is_key_down(Key::Up) {
-        translation.y -= 10.0;
-    }
-    if window.is_key_down(Key::Down) {
-        translation.y += 10.0;
-    }
-    if window.is_key_down(Key::S) {
-        *scale += 2.0;
+fn handle_input(
+    window: &Window,
+    center_offset: &mut Vec3,
+    selected_planet: &mut usize,
+    extra_rot: &mut [f32; 6],
+    extra_scale: &mut [f32; 6],
+) {
+    // ===== mover todo el sistema con WASD =====
+    let move_step = 8.0;
+    if window.is_key_down(Key::D) {
+        center_offset.x += move_step;
     }
     if window.is_key_down(Key::A) {
-        *scale -= 2.0;
-    }
-    if window.is_key_down(Key::Q) {
-        rotation.x -= PI / 10.0;
+        center_offset.x -= move_step;
     }
     if window.is_key_down(Key::W) {
-        rotation.x += PI / 10.0;
+        center_offset.y -= move_step;
     }
-    if window.is_key_down(Key::E) {
-        rotation.y -= PI / 10.0;
+    if window.is_key_down(Key::S) {
+        center_offset.y += move_step;
     }
-    if window.is_key_down(Key::R) {
-        rotation.y += PI / 10.0;
+
+    // ===== seleccionar planeta con números 1-6 =====
+    if window.is_key_down(Key::Key1) {
+        *selected_planet = STAR;
     }
-    if window.is_key_down(Key::T) {
-        rotation.z -= PI / 10.0;
+    if window.is_key_down(Key::Key2) {
+        *selected_planet = LAVA;
     }
-    if window.is_key_down(Key::Y) {
-        rotation.z += PI / 10.0;
+    if window.is_key_down(Key::Key3) {
+        *selected_planet = ROCKY;
+    }
+    if window.is_key_down(Key::Key4) {
+        *selected_planet = MOON;
+    }
+    if window.is_key_down(Key::Key5) {
+        *selected_planet = GAS;
+    }
+    if window.is_key_down(Key::Key6) {
+        *selected_planet = ICE;
+    }
+
+    // ===== rotar planeta seleccionado con Z / X =====
+    let rot_step = 0.05;
+    if window.is_key_down(Key::Z) {
+        extra_rot[*selected_planet] -= rot_step;
+    }
+    if window.is_key_down(Key::X) {
+        extra_rot[*selected_planet] += rot_step;
+    }
+
+    // ===== escalar planeta seleccionado con C / V =====
+    let scale_step = 0.02;
+    if window.is_key_down(Key::C) {
+        extra_scale[*selected_planet] *= 1.0 + scale_step;
+    }
+    if window.is_key_down(Key::V) {
+        extra_scale[*selected_planet] *= 1.0 - scale_step;
+    }
+
+    // Clamp para que no exploten
+    for s in extra_scale.iter_mut() {
+        if *s < 0.2 {
+            *s = 0.2;
+        }
+        if *s > 3.0 {
+            *s = 3.0;
+        }
     }
 }
