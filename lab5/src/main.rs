@@ -3,6 +3,8 @@ use minifb::{Key, Window, WindowOptions};
 use std::time::Duration;
 use std::f32::consts::PI;
 use std::time::Instant;
+use rayon::prelude::*;
+use crate::fragment::Fragment;
 
 mod framebuffer;
 mod triangle;
@@ -79,15 +81,18 @@ fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
 }
 
 fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Vertex]) {
-    // Vertex Shader Stage
-    let mut transformed_vertices = Vec::with_capacity(vertex_array.len());
-    for vertex in vertex_array {
-        let transformed = vertex_shader(vertex, uniforms);
-        transformed_vertices.push(transformed);
-    }
+    // ============================
+    // 1) Vertex Shader (paralelo)
+    // ============================
+    let transformed_vertices: Vec<Vertex> = vertex_array
+        .par_iter()                              // <-- paralelo
+        .map(|vertex| vertex_shader(vertex, uniforms))
+        .collect();
 
-    // Primitive Assembly Stage
-    let mut triangles = Vec::new();
+    // ================================
+    // 2) Primitive Assembly (igual)
+    // ================================
+    let mut triangles: Vec<[Vertex; 3]> = Vec::new();
     for i in (0..transformed_vertices.len()).step_by(3) {
         if i + 2 < transformed_vertices.len() {
             triangles.push([
@@ -98,13 +103,19 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
         }
     }
 
-    // Rasterization Stage
-    let mut fragments = Vec::new();
-    for tri in &triangles {
-        fragments.extend(triangle(&tri[0], &tri[1], &tri[2]));
-    }
+    // ========================================
+    // 3) Rasterización de triángulos (paralelo)
+    // ========================================
+    let fragments: Vec<Fragment> = triangles
+        .par_iter()   // <-- cada triángulo en paralelo
+        .flat_map(|tri| triangle(&tri[0], &tri[1], &tri[2]))
+        .collect();
 
-    // Fragment Processing Stage
+    // ========================================
+    // 4) Escribir fragmentos en el framebuffer
+    //    (secuencial; aquí ya es solo escribir
+    //    en memoria compartida)
+    // ========================================
     for fragment in fragments {
         let x = fragment.position.x as usize;
         let y = fragment.position.y as usize;
@@ -116,11 +127,12 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
     }
 }
 
+
 fn main() {
 
-    let window_width = 800;
+    let window_width = 900;
     let window_height = 600;
-    let framebuffer_width = 800;
+    let framebuffer_width = 900;
     let framebuffer_height = 600;
     let frame_delay = Duration::from_millis(16);
 
@@ -284,8 +296,8 @@ fn main() {
         // ============ SISTEMA DE ANILLOS (ROCAS) ============
         // ====================================================
         let ring_radius = gas_scale * 2.1;
-        let ring_scale = 6.0;
-        let ring_count = 32;
+        let ring_scale = 5.0;
+        let ring_count = 12;
 
         for i in 0..ring_count {
             let angle = (i as f32 / ring_count as f32) * 2.0 * PI + time_sec * 0.15;
