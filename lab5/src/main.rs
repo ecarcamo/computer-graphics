@@ -134,7 +134,7 @@ fn main() {
     let mut rotation = Vec3::new(0.0, 0.0, 0.0);
     let mut scale = 100.0f32;
 
-    let obj = Obj::load("assets/models/model.obj").expect("Failed to load obj");
+    let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load obj");
     let vertex_arrays = obj.get_vertex_array(); 
     let start_time = Instant::now();
 
@@ -150,11 +150,11 @@ fn main() {
 
         framebuffer.clear();
 
-        // === 1) ESTRELLA (centro) ===
+        // === 1) ESTRELLA (izquierda) ===
         let star_model = create_model_matrix(
-            Vec3::new(400.0, 300.0, 0.0),          // centro de la pantalla
-            120.0,                                 // tamaño de la esfera
-            Vec3::new(0.0, time_sec * 0.2, 0.0),   // rotación lenta
+            Vec3::new(200.0, 300.0, 0.0),        // MÁS A LA IZQUIERDA
+            90.0,                                // un poco más pequeña
+            Vec3::new(0.0, time_sec * 0.2, 0.0),
         );
         let star_uniforms = Uniforms {
             model_matrix: star_model,
@@ -163,11 +163,11 @@ fn main() {
         };
         render(&mut framebuffer, &star_uniforms, &vertex_arrays);
 
-        // === 2) PLANETA ROCOSO (controlado con teclas) ===
+        // === 2) PLANETA ROCOSO (centro) ===
         let rocky_model = create_model_matrix(
-            translation,           // se mueve con flechas / rota con QWERTY
-            scale,
-            rotation,
+            Vec3::new(400.0, 300.0, 0.0),        // CENTRO
+            80.0,
+            Vec3::new(0.0, time_sec * 0.4, 0.0),
         );
         let rocky_uniforms = Uniforms {
             model_matrix: rocky_model,
@@ -176,11 +176,10 @@ fn main() {
         };
         render(&mut framebuffer, &rocky_uniforms, &vertex_arrays);
 
-        // === 3) GIGANTE GASEOSO (a la izquierda orbitando un poquito) ===
-        let gas_x = 200.0 + (time_sec * 20.0).sin() * 30.0; // pequeña “órbita” horizontal
+        // === 3) GIGANTE GASEOSO (derecha) ===
         let gas_model = create_model_matrix(
-            Vec3::new(gas_x, 280.0, 0.0),
-            90.0,
+            Vec3::new(600.0, 300.0, 0.0),        // MÁS A LA DERECHA
+            100.0,
             Vec3::new(0.0, time_sec * 0.3, 0.0),
         );
         let gas_uniforms = Uniforms {
@@ -189,6 +188,7 @@ fn main() {
             time: time_sec,
         };
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
+
 
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
