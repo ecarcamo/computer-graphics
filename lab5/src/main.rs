@@ -120,25 +120,36 @@ fn main() {
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     let mut window = Window::new(
-        "Rust Graphics - Renderer Example",
+        "Rust Graphics - Lab 5 - Solar System",
         window_width,
         window_height,
         WindowOptions::default(),
     )
     .unwrap();
 
-    window.set_position(500, 500);
+    window.set_position(500, 300);
     window.update();
 
     framebuffer.set_background_color(0x333355);
 
-    let mut translation = Vec3::new(300.0, 200.0, 0.0);
+    // Para compatibilidad con tu manejador de input
+    let mut translation = Vec3::new(0.0, 0.0, 0.0);
     let mut rotation = Vec3::new(0.0, 0.0, 0.0);
     let mut scale = 100.0f32;
 
-    let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load obj");
-    let vertex_arrays = obj.get_vertex_array(); 
+    // Cargamos la esfera
+    let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load sphere");
+    let vertex_arrays = obj.get_vertex_array();
     let start_time = Instant::now();
+
+    // Centro de la “cámara”
+    let center = Vec3::new(400.0, 300.0, 0.0);
+
+    // Escalas reducidas (zoom out)
+    let sun_scale   = 50.0;
+    let rocky_scale = 35.0;
+    let gas_scale   = 45.0;
+    let moon_scale  = 15.0;
 
     while window.is_open() {
         let elapsed = start_time.elapsed();
@@ -152,54 +163,58 @@ fn main() {
 
         framebuffer.clear();
 
-        // === 1) ESTRELLA (izquierda) ===
+        // ====================================================
+        // ===============    SOL (CENTRADO)    ================
+        // ====================================================
         let star_model = create_model_matrix(
-            Vec3::new(200.0, 300.0, 0.0),        // MÁS A LA IZQUIERDA
-            90.0,                                // un poco más pequeña
+            center,
+            sun_scale,
             Vec3::new(0.0, time_sec * 0.2, 0.0),
         );
+
         let star_uniforms = Uniforms {
             model_matrix: star_model,
             planet_shader: PlanetShader::Star,
             time: time_sec,
         };
+
         render(&mut framebuffer, &star_uniforms, &vertex_arrays);
 
-        // === 2) PLANETA ROCOSO (centro) ===
+        // ====================================================
+        // =========== PLANETA ROCOSO ORBITANDO ==============
+        // ====================================================
+        let rocky_orbit_radius = 140.0;
+        let rocky_angle = time_sec * 0.4;
+
+        let rocky_x = center.x + rocky_orbit_radius * rocky_angle.cos();
+        let rocky_y = center.y + rocky_orbit_radius * rocky_angle.sin();
+
         let rocky_model = create_model_matrix(
-            Vec3::new(400.0, 300.0, 0.0),        // CENTRO
-            80.0,
-            Vec3::new(0.0, time_sec * 0.4, 0.0),
+            Vec3::new(rocky_x, rocky_y, 0.0),
+            rocky_scale,
+            Vec3::new(0.0, time_sec * 0.6, 0.0),
         );
+
         let rocky_uniforms = Uniforms {
             model_matrix: rocky_model,
             planet_shader: PlanetShader::Rocky,
             time: time_sec,
         };
+
         render(&mut framebuffer, &rocky_uniforms, &vertex_arrays);
 
-        // === 3) GIGANTE GASEOSO (derecha) ===
-        let gas_model = create_model_matrix(
-            Vec3::new(600.0, 300.0, 0.0),        // MÁS A LA DERECHA
-            100.0,
-            Vec3::new(0.0, time_sec * 0.3, 0.0),
-        );
-        let gas_uniforms = Uniforms {
-            model_matrix: gas_model,
-            planet_shader: PlanetShader::GasGiant,
-            time: time_sec,
-        };
-        render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
+        // ====================================================
+        // ====================   LUNA   =======================
+        // ====================================================
+        let moon_orbit = 40.0;
+        let moon_angle = time_sec * 1.2;
 
-        let moon_radius = 130.0;              // distancia desde el planeta rocoso
-        let moon_angle  = time_sec * 1.0;     // velocidad de órbita
-
-        let moon_x = 400.0 + moon_radius * moon_angle.cos();
-        let moon_y = 300.0 + moon_radius * moon_angle.sin();
+        let moon_x = rocky_x + moon_orbit * moon_angle.cos();
+        let moon_y = rocky_y + moon_orbit * moon_angle.sin();
 
         let moon_model = create_model_matrix(
             Vec3::new(moon_x, moon_y, 0.0),
-            30.0,                              // tamaño de la luna
+            moon_scale,
             Vec3::new(0.0, time_sec * 0.8, 0.0),
         );
 
@@ -211,16 +226,39 @@ fn main() {
 
         render(&mut framebuffer, &moon_uniforms, &vertex_arrays);
 
+        // ====================================================
+        // ============ GIGANTE GASEOSO ORBITANDO =============
+        // ====================================================
+        let gas_orbit = 230.0;
+        let gas_angle = time_sec * 0.25;
 
+        let gas_x = center.x + gas_orbit * gas_angle.cos();
+        let gas_y = center.y + gas_orbit * gas_angle.sin();
+
+        let gas_model = create_model_matrix(
+            Vec3::new(gas_x, gas_y, 0.0),
+            gas_scale,
+            Vec3::new(0.0, time_sec * 0.3, 0.0),
+        );
+
+        let gas_uniforms = Uniforms {
+            model_matrix: gas_model,
+            planet_shader: PlanetShader::GasGiant,
+            time: time_sec,
+        };
+
+        render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
+
+        // ACTUALIZAR VENTANA
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();
 
         std::thread::sleep(frame_delay);
     }
-
-    
 }
+
+
 
 fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, scale: &mut f32) {
     if window.is_key_down(Key::Right) {
