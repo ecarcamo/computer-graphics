@@ -12,7 +12,9 @@ mod obj;
 mod color;
 mod fragment;
 mod shaders;
+mod screenshot;
 
+use screenshot::save_screenshot;
 use framebuffer::Framebuffer;
 use vertex::Vertex;
 use obj::Obj;
@@ -112,6 +114,7 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
 }
 
 fn main() {
+
     let window_width = 800;
     let window_height = 600;
     let framebuffer_width = 800;
@@ -150,6 +153,8 @@ fn main() {
     let rocky_scale = 35.0;
     let gas_scale   = 45.0;
     let moon_scale  = 15.0;
+
+    let mut screenshot_taken = false;
 
     while window.is_open() {
         let elapsed = start_time.elapsed();
@@ -206,7 +211,7 @@ fn main() {
         // ====================================================
         // ====================   LUNA   =======================
         // ====================================================
-        let moon_orbit = 40.0;
+        let moon_orbit = rocky_scale * 2.0;
         let moon_angle = time_sec * 1.2;
 
         let moon_x = rocky_x + moon_orbit * moon_angle.cos();
@@ -249,10 +254,21 @@ fn main() {
 
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
-        // ACTUALIZAR VENTANA
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();
+
+        // 👇 tomar captura SOLO en el primer frame
+        if !screenshot_taken {
+            save_screenshot(
+                &framebuffer.buffer,
+                framebuffer_width,
+                framebuffer_height,
+                "planetas.png",
+            );
+            screenshot_taken = true;
+            println!("Captura guardada como planetas.png");
+        }
 
         std::thread::sleep(frame_delay);
     }
