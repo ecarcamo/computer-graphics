@@ -23,10 +23,13 @@ use shaders::vertex_shader;
 
 #[derive(Clone, Copy)]
 pub enum PlanetShader {
-    Star,       
-    Rocky,     
-    GasGiant,  
-    Moon,     
+    Star,       //Sol
+    Rocky,      // Planeta rocoso tipo tierra
+    GasGiant,   // Júpiter
+    Moon,       // Luna
+    Lava,       // PLantea volcánico extra
+    IceGiant,   // Planeta de huelo extra
+    RingRock,   // "piedritas" de los anillos
 }
 
 
@@ -186,7 +189,30 @@ fn main() {
         render(&mut framebuffer, &star_uniforms, &vertex_arrays);
 
         // ====================================================
-        // =========== PLANETA ROCOSO ORBITANDO ==============
+        // ======== PLANETA EXTRA 1: LAVA (ÓRBITA INTERIOR) ===
+        // ====================================================
+        let lava_orbit_radius = 90.0;
+        let lava_angle = time_sec * 0.7;
+
+        let lava_x = center.x + lava_orbit_radius * lava_angle.cos();
+        let lava_y = center.y + lava_orbit_radius * lava_angle.sin();
+
+        let lava_model = create_model_matrix(
+            Vec3::new(lava_x, lava_y, 0.0),
+            25.0,
+            Vec3::new(0.0, time_sec * 0.9, 0.0),
+        );
+
+        let lava_uniforms = Uniforms {
+            model_matrix: lava_model,
+            planet_shader: PlanetShader::Lava,
+            time: time_sec,
+        };
+
+        render(&mut framebuffer, &lava_uniforms, &vertex_arrays);
+
+        // ====================================================
+        // =========== PLANETA ROCOSO ORBITANDO ===============
         // ====================================================
         let rocky_orbit_radius = 140.0;
         let rocky_angle = time_sec * 0.4;
@@ -232,9 +258,9 @@ fn main() {
         render(&mut framebuffer, &moon_uniforms, &vertex_arrays);
 
         // ====================================================
-        // ============ GIGANTE GASEOSO ORBITANDO =============
+        // ========= GIGANTE GASEOSO ORBITANDO (JÚPITER) ======
         // ====================================================
-        let gas_orbit = 230.0;
+        let gas_orbit = 220.0;
         let gas_angle = time_sec * 0.25;
 
         let gas_x = center.x + gas_orbit * gas_angle.cos();
@@ -254,11 +280,62 @@ fn main() {
 
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
+        // ====================================================
+        // ============ SISTEMA DE ANILLOS (ROCAS) ============
+        // ====================================================
+        let ring_radius = gas_scale * 2.1;
+        let ring_scale = 6.0;
+        let ring_count = 32;
+
+        for i in 0..ring_count {
+            let angle = (i as f32 / ring_count as f32) * 2.0 * PI + time_sec * 0.15;
+
+            let ring_x = gas_x + ring_radius * angle.cos();
+            let ring_y = gas_y + ring_radius * angle.sin();
+
+            let ring_model = create_model_matrix(
+                Vec3::new(ring_x, ring_y, 0.0),
+                ring_scale,
+                Vec3::new(0.0, 0.0, 0.0),
+            );
+
+            let ring_uniforms = Uniforms {
+                model_matrix: ring_model,
+                planet_shader: PlanetShader::RingRock,
+                time: time_sec,
+            };
+
+            render(&mut framebuffer, &ring_uniforms, &vertex_arrays);
+        }
+
+        // ====================================================
+        // ====== PLANETA EXTRA 2: ICE GIANT (ÓRBITA EXTERIOR)
+        // ====================================================
+        let ice_orbit_radius = 300.0;
+        let ice_angle = time_sec * 0.18;
+
+        let ice_x = center.x + ice_orbit_radius * ice_angle.cos();
+        let ice_y = center.y + ice_orbit_radius * ice_angle.sin();
+
+        let ice_model = create_model_matrix(
+            Vec3::new(ice_x, ice_y, 0.0),
+            40.0,
+            Vec3::new(0.0, time_sec * 0.35, 0.0),
+        );
+
+        let ice_uniforms = Uniforms {
+            model_matrix: ice_model,
+            planet_shader: PlanetShader::IceGiant,
+            time: time_sec,
+        };
+
+        render(&mut framebuffer, &ice_uniforms, &vertex_arrays);
+
+        // ACTUALIZAR VENTANA
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();
 
-        // 👇 tomar captura SOLO en el primer frame
         if !screenshot_taken {
             save_screenshot(
                 &framebuffer.buffer,
@@ -269,9 +346,9 @@ fn main() {
             screenshot_taken = true;
             println!("Captura guardada como planetas.png");
         }
-
         std::thread::sleep(frame_delay);
     }
+
 }
 
 

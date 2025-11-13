@@ -37,6 +37,9 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
         PlanetShader::Rocky    => rocky_color(p, t),
         PlanetShader::GasGiant => gas_giant_color(p, t),
         PlanetShader::Moon     => moon_color(p, t),
+        PlanetShader::Lava     => lava_planet_color(p, t),
+        PlanetShader::IceGiant => ice_giant_color(p, t),
+        PlanetShader::RingRock => ring_rock_color(p, t),
     };
 
 
@@ -182,6 +185,95 @@ fn moon_color(p: Vec3, _time: f32) -> Color {
 
     if d < 0.25 {
         color = Color::new(100, 100, 100);
+    }
+
+    color
+}
+
+
+// ========================
+// PLANETA VOLCÁNICO (Lava)
+// ========================
+fn lava_planet_color(p: Vec3, time: f32) -> Color {
+    // Capa 1: roca oscura
+    let mut color = Color::new(40, 15, 10);
+
+    // Capa 2: zonas de lava base
+    let lava_noise = (p.x * 6.0 + time * 1.0).sin().abs()
+                   + (p.z * 8.0 - time * 0.8).sin().abs();
+    if lava_noise > 1.3 {
+        color = Color::new(200, 80, 20);
+    }
+
+    // Capa 3: grietas brillantes (lava muy caliente)
+    let cracks = (p.x * 14.0 + time * 2.5).sin()
+               * (p.z * 16.0 - time * 2.0).cos();
+    if cracks > 0.7 {
+        color = Color::new(255, 200, 80);
+    }
+
+    // Capa 4: ceniza en los polos
+    if p.y > 0.7 || p.y < -0.7 {
+        color = Color::new(90, 90, 90);
+    }
+
+    color
+}
+
+// =============================
+// PLANETA DE HIELO (Ice Giant)
+// =============================
+fn ice_giant_color(p: Vec3, time: f32) -> Color {
+    let latitude = p.y;
+
+    // Capa 1: azul profundo
+    let mut color = Color::new(10, 30, 80);
+
+    // Capa 2: bandas frías azul claro
+    let bands = (latitude * 9.0 + time * 0.2).sin()
+              + (p.z * 5.0).cos() * 0.5;
+    if bands > 0.5 {
+        color = Color::new(40, 130, 200);
+    } else if bands < -0.5 {
+        color = Color::new(20, 70, 150);
+    }
+
+    // Capa 3: “auroras” cerca de los polos
+    if latitude > 0.6 || latitude < -0.6 {
+        let aurora = (p.x * 15.0 + time * 1.2).sin();
+        if aurora > 0.4 {
+            color = Color::new(80, 220, 200);
+        }
+    }
+
+    // Capa 4: puntos de hielo brillante
+    let ice_spots = (p.x * 18.0 + p.y * 10.0 + time * 0.7).sin();
+    if ice_spots > 0.85 {
+        color = Color::new(220, 250, 255);
+    }
+
+    color
+}
+
+// ========================================
+// “Piedras” de los anillos del gas giant
+// ========================================
+fn ring_rock_color(p: Vec3, _time: f32) -> Color {
+    // Capa 1: gris base
+    let mut color = Color::new(160, 150, 140);
+
+    // Capa 2: variación de tono
+    let noise = (p.x * 10.0).sin() * (p.z * 12.0).cos();
+    if noise > 0.5 {
+        color = Color::new(190, 180, 170);
+    } else if noise < -0.5 {
+        color = Color::new(120, 110, 100);
+    }
+
+    // Capa 3: manchas oscuras
+    let spots = (p.x * 20.0 + p.y * 18.0).sin();
+    if spots > 0.8 {
+        color = Color::new(80, 70, 60);
     }
 
     color
