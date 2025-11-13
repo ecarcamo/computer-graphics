@@ -33,10 +33,12 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
     let t = uniforms.time;
 
     let color = match uniforms.planet_shader {
-        PlanetShader::Star => star_color(p, t),
-        PlanetShader::Rocky => rocky_color(p, t),
+        PlanetShader::Star     => star_color(p, t),
+        PlanetShader::Rocky    => rocky_color(p, t),
         PlanetShader::GasGiant => gas_giant_color(p, t),
+        PlanetShader::Moon     => moon_color(p, t),
     };
+
 
 
     Vertex {
@@ -125,6 +127,31 @@ fn gas_giant_color(p: Vec3, time: f32) -> Color {
 
     if d < 0.4 {
         color = Color::new(200, 80, 50);
+    }
+
+    color
+}
+
+
+fn moon_color(p: Vec3, _time: f32) -> Color {
+    // Base gris
+    let mut color = Color::new(180, 180, 180);
+
+    // “manchas” oscuras tipo mares lunares
+    let noise = (p.x * 7.0).sin() * (p.z * 5.0).cos();
+    if noise > 0.4 {
+        color = Color::new(120, 120, 120);
+    }
+
+    // Cráter grande
+    let crater_center = Vec3::new(-0.3, 0.1, 0.2);
+    let dx = p.x - crater_center.x;
+    let dy = p.y - crater_center.y;
+    let dz = p.z - crater_center.z;
+    let d = (dx * dx + dy * dy + dz * dz).sqrt();
+
+    if d < 0.25 {
+        color = Color::new(80, 80, 80);
     }
 
     color

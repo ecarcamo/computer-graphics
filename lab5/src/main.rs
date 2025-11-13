@@ -23,8 +23,10 @@ use shaders::vertex_shader;
 pub enum PlanetShader {
     Star,       
     Rocky,     
-    GasGiant,   
+    GasGiant,  
+    Moon,     
 }
+
 
 pub struct Uniforms {
     model_matrix: Mat4,
