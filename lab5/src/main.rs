@@ -191,6 +191,26 @@ fn main() {
         };
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
+        let moon_radius = 130.0;              // distancia desde el planeta rocoso
+        let moon_angle  = time_sec * 1.0;     // velocidad de órbita
+
+        let moon_x = 400.0 + moon_radius * moon_angle.cos();
+        let moon_y = 300.0 + moon_radius * moon_angle.sin();
+
+        let moon_model = create_model_matrix(
+            Vec3::new(moon_x, moon_y, 0.0),
+            30.0,                              // tamaño de la luna
+            Vec3::new(0.0, time_sec * 0.8, 0.0),
+        );
+
+        let moon_uniforms = Uniforms {
+            model_matrix: moon_model,
+            planet_shader: PlanetShader::Moon,
+            time: time_sec,
+        };
+
+        render(&mut framebuffer, &moon_uniforms, &vertex_arrays);
+
 
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
