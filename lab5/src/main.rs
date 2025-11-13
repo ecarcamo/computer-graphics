@@ -150,15 +150,45 @@ fn main() {
 
         framebuffer.clear();
 
-        let model_matrix = create_model_matrix(translation, scale, rotation);
-        let uniforms = Uniforms {
-            model_matrix,
+        // === 1) ESTRELLA (centro) ===
+        let star_model = create_model_matrix(
+            Vec3::new(400.0, 300.0, 0.0),          // centro de la pantalla
+            120.0,                                 // tamaño de la esfera
+            Vec3::new(0.0, time_sec * 0.2, 0.0),   // rotación lenta
+        );
+        let star_uniforms = Uniforms {
+            model_matrix: star_model,
             planet_shader: PlanetShader::Star,
-            time: time_sec,                  
+            time: time_sec,
         };
+        render(&mut framebuffer, &star_uniforms, &vertex_arrays);
 
-        framebuffer.set_current_color(0xFFDDDD);
-        render(&mut framebuffer, &uniforms, &vertex_arrays);
+        // === 2) PLANETA ROCOSO (controlado con teclas) ===
+        let rocky_model = create_model_matrix(
+            translation,           // se mueve con flechas / rota con QWERTY
+            scale,
+            rotation,
+        );
+        let rocky_uniforms = Uniforms {
+            model_matrix: rocky_model,
+            planet_shader: PlanetShader::Rocky,
+            time: time_sec,
+        };
+        render(&mut framebuffer, &rocky_uniforms, &vertex_arrays);
+
+        // === 3) GIGANTE GASEOSO (a la izquierda orbitando un poquito) ===
+        let gas_x = 200.0 + (time_sec * 20.0).sin() * 30.0; // pequeña “órbita” horizontal
+        let gas_model = create_model_matrix(
+            Vec3::new(gas_x, 280.0, 0.0),
+            90.0,
+            Vec3::new(0.0, time_sec * 0.3, 0.0),
+        );
+        let gas_uniforms = Uniforms {
+            model_matrix: gas_model,
+            planet_shader: PlanetShader::GasGiant,
+            time: time_sec,
+        };
+        render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
@@ -166,6 +196,8 @@ fn main() {
 
         std::thread::sleep(frame_delay);
     }
+
+    
 }
 
 fn handle_input(window: &Window, translation: &mut Vec3, rotation: &mut Vec3, scale: &mut f32) {
