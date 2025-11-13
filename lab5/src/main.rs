@@ -88,17 +88,13 @@ fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
 }
 
 fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Vertex]) {
-    // ============================
     // 1) Vertex Shader (paralelo)
-    // ============================
     let transformed_vertices: Vec<Vertex> = vertex_array
         .par_iter()                              // <-- paralelo
         .map(|vertex| vertex_shader(vertex, uniforms))
         .collect();
 
-    // ================================
     // 2) Primitive Assembly (igual)
-    // ================================
     let mut triangles: Vec<[Vertex; 3]> = Vec::new();
     for i in (0..transformed_vertices.len()).step_by(3) {
         if i + 2 < transformed_vertices.len() {
@@ -110,19 +106,13 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
         }
     }
 
-    // ========================================
     // 3) Rasterización de triángulos (paralelo)
-    // ========================================
     let fragments: Vec<Fragment> = triangles
         .par_iter()   // <-- cada triángulo en paralelo
         .flat_map(|tri| triangle(&tri[0], &tri[1], &tri[2]))
         .collect();
 
-    // ========================================
-    // 4) Escribir fragmentos en el framebuffer
-    //    (secuencial; aquí ya es solo escribir
-    //    en memoria compartida)
-    // ========================================
+    // 4) Escribir fragmentos en el framebuffer (secuencial; aquí ya solo escribimos en memoria compartida)
     for fragment in fragments {
         let x = fragment.position.x as usize;
         let y = fragment.position.y as usize;
@@ -188,7 +178,7 @@ fn main() {
     let mut screenshot_taken = false;
 
     while window.is_open() {
-        // ===================== TIEMPO + PAUSA (P) ======================
+        // Tiempo y pausa (P)
         let now = Instant::now();
         let dt = now.duration_since(last_instant).as_secs_f32();
         last_instant = now;
@@ -211,7 +201,7 @@ fn main() {
             break;
         }
 
-        // ===================== CONTROLES DE ENTRADA ======================
+        // Controles de entrada
         handle_input(
             &window,
             &mut center_offset,
@@ -224,9 +214,7 @@ fn main() {
 
         framebuffer.clear();
 
-        // ====================================================
-        // ===============    SOL (CENTRADO)    ================
-        // ====================================================
+        // Sol centrado
         let star_model = create_model_matrix(
             center_pos,
             sun_scale * extra_scale[STAR],
@@ -241,9 +229,7 @@ fn main() {
 
         render(&mut framebuffer, &star_uniforms, &vertex_arrays);
 
-        // ====================================================
-        // ======== PLANETA EXTRA 1: LAVA (ÓRBITA INTERIOR) ===
-        // ====================================================
+        // Planeta Lava (órbita interior)
         let lava_orbit_radius = 90.0;
         let lava_angle = time_sec * 0.7;
 
@@ -264,9 +250,7 @@ fn main() {
 
         render(&mut framebuffer, &lava_uniforms, &vertex_arrays);
 
-        // ====================================================
-        // =========== PLANETA ROCOSO ORBITANDO ===============
-        // ====================================================
+        // Planeta rocoso orbitando
         let rocky_orbit_radius = 140.0;
         let rocky_angle = time_sec * 0.4;
 
@@ -287,9 +271,7 @@ fn main() {
 
         render(&mut framebuffer, &rocky_uniforms, &vertex_arrays);
 
-        // ====================================================
-        // ====================   LUNA   =======================
-        // ====================================================
+        // Luna
         let moon_orbit = rocky_scale * 2.0;
         let moon_angle = time_sec * 1.2;
 
@@ -310,9 +292,7 @@ fn main() {
 
         render(&mut framebuffer, &moon_uniforms, &vertex_arrays);
 
-        // ====================================================
-        // ========= GIGANTE GASEOSO ORBITANDO (JÚPITER) ======
-        // ====================================================
+        // Gigante gaseoso orbitando (Júpiter)
         let gas_orbit = 220.0;
         let gas_angle = time_sec * 0.25;
 
@@ -333,9 +313,7 @@ fn main() {
 
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
-        // ====================================================
-        // ============ SISTEMA DE ANILLOS (ROCAS) ============
-        // ====================================================
+        // Sistema de anillos (rocas)
         let ring_radius = gas_scale * 2.1 * extra_scale[GAS];
         let ring_scale = 5.0 * extra_scale[GAS];
         let ring_count = 12;
@@ -361,9 +339,7 @@ fn main() {
             render(&mut framebuffer, &ring_uniforms, &vertex_arrays);
         }
 
-        // ====================================================
-        // ====== PLANETA EXTRA 2: ICE GIANT (ÓRBITA EXTERIOR)
-        // ====================================================
+        // Ice Giant (órbita exterior)
         let ice_orbit_radius = 300.0;
         let ice_angle = time_sec * 0.18;
 
@@ -403,7 +379,7 @@ fn main() {
 
         std::thread::sleep(frame_delay);
 
-        // ===================== SCREENSHOT MANUAL (O) =====================
+        // Screenshot manual (O)
         if window.is_key_down(Key::O) {
             let filename = format!("screenshot_{}.png", base_time as u32);
             save_screenshot(
@@ -427,7 +403,7 @@ fn handle_input(
     extra_rot: &mut [f32; 6],
     extra_scale: &mut [f32; 6],
 ) {
-    // ===== mover todo el sistema con WASD =====
+    // Mover el sistema con WASD
     let move_step = 8.0;
     if window.is_key_down(Key::D) {
         center_offset.x += move_step;
@@ -442,7 +418,7 @@ fn handle_input(
         center_offset.y += move_step;
     }
 
-    // ===== seleccionar planeta con números 1-6 =====
+    // Seleccionar planeta con 1-6
     if window.is_key_down(Key::Key1) {
         *selected_planet = STAR;
     }
@@ -462,7 +438,7 @@ fn handle_input(
         *selected_planet = ICE;
     }
 
-    // ===== rotar planeta seleccionado con Z / X =====
+    // Rotar planeta seleccionado con Z / X
     let rot_step = 0.05;
     if window.is_key_down(Key::Z) {
         extra_rot[*selected_planet] -= rot_step;
@@ -471,7 +447,7 @@ fn handle_input(
         extra_rot[*selected_planet] += rot_step;
     }
 
-    // ===== escalar planeta seleccionado con C / V =====
+    // Escalar planeta seleccionado con C / V
     let scale_step = 0.02;
     if window.is_key_down(Key::C) {
         extra_scale[*selected_planet] *= 1.0 + scale_step;

@@ -191,9 +191,7 @@ fn moon_color(p: Vec3, _time: f32) -> Color {
 }
 
 
-// ========================
-// PLANETA VOLCÁNICO (Lava)
-// ========================
+// Planeta volcánico (Lava)
 fn lava_planet_color(p: Vec3, time: f32) -> Color {
     // Capa 1: roca oscura
     let mut color = Color::new(40, 15, 10);
@@ -220,9 +218,7 @@ fn lava_planet_color(p: Vec3, time: f32) -> Color {
     color
 }
 
-// =============================
-// PLANETA DE HIELO (Ice Giant)
-// =============================
+// Planeta de hielo (Ice Giant)
 fn ice_giant_color(p: Vec3, time: f32) -> Color {
     let latitude = p.y;
 
@@ -255,9 +251,7 @@ fn ice_giant_color(p: Vec3, time: f32) -> Color {
     color
 }
 
-// ========================================
 // “Piedras” de los anillos del gas giant
-// ========================================
 fn ring_rock_color(p: Vec3, _time: f32) -> Color {
     // Capa 1: gris base
     let mut color = Color::new(160, 150, 140);

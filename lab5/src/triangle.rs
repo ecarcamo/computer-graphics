@@ -7,7 +7,6 @@ use crate::color::Color;
 pub fn _triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
     let mut fragments = Vec::new();
 
-    // Draw the three sides of the triangle (solo contorno)
     fragments.extend(line(v1, v2));
     fragments.extend(line(v2, v3));
     fragments.extend(line(v3, v1));
@@ -28,15 +27,12 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
     let light_dir = Vec3::new(0.0, 0.0, -1.0);
     let triangle_area = edge_function(&a, &b, &c);
 
-    // Iterate over each pixel in the bounding box
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let point = Vec3::new(x as f32 + 0.5, y as f32 + 0.5, 0.0);
 
-            // Calculate barycentric coordinates
             let (w1, w2, w3) = barycentric_coordinates(&point, &a, &b, &c, triangle_area);
 
-            // Check if the point is inside the triangle
             if w1 >= 0.0 && w1 <= 1.0 &&
                w2 >= 0.0 && w2 <= 1.0 &&
                w3 >= 0.0 && w3 <= 1.0 {
@@ -51,7 +47,6 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 // Intensidad de la luz
                 let intensity = dot(&normal, &light_dir).max(0.0);
 
-                // ===== Color interpolado desde el vertex shader =====
                 let r = v1.color.r as f32 * w1
                       + v2.color.r as f32 * w2
                       + v3.color.r as f32 * w3;
