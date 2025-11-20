@@ -14,6 +14,15 @@ impl Color {
     Color { r, g, b }
   }
 
+  pub fn lerp(&self, other: &Color, t: f32) -> Color {
+    let t = t.clamp(0.0, 1.0);
+    Color {
+      r: (self.r as f32 * (1.0 - t) + other.r as f32 * t) as u8,
+      g: (self.g as f32 * (1.0 - t) + other.g as f32 * t) as u8,
+      b: (self.b as f32 * (1.0 - t) + other.b as f32 * t) as u8,
+    }
+  }
+
   pub fn black() -> Self {
     Color { r: 0, g: 0, b: 0 }
   }
