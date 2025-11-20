@@ -52,7 +52,6 @@ pub struct Uniforms {
 struct Camera {
     position: Vec3,
     zoom: f32,
-    pitch: f32,
     screen_bias: Vec3, // desplaza el centro de proyección para colocar la nave en pantalla
 }
 
@@ -110,37 +109,37 @@ fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
 }
 
 // === MATRIZ DE VISTA ORIGINAL (ajustada para seguir a la nave) ===
-fn build_view_matrix(
-    camera_pos: Vec3,
-    yaw: f32,
-    pitch: f32,
+fn build_view_matrix_lookat(
+    eye: Vec3,
+    center: Vec3,
     zoom: f32,
     screen_center: Vec3,
     screen_bias: Vec3,
 ) -> Mat4 {
-    // Rotación para alinear la vista con la dirección de la nave (yaw) y un pequeño pitch
-    let (sy, cy) = (-yaw).sin_cos();
-    let (sp, cp) = (-pitch).sin_cos();
+    let forward = (center - eye).normalize();
+    let world_up = Vec3::new(0.0, 0.0, 1.0);
+    let right = world_up.cross(&forward).normalize();
+    let up = forward.cross(&right);
 
     let rot = Mat4::new(
-        cy,      -sy * cp,   -sy * sp,   0.0,
-        sy,       cy * cp,    cy * sp,   0.0,
-        0.0,      -sp,        cp,        0.0,
-        0.0,      0.0,        0.0,       1.0,
+        right.x,   right.y,   right.z,   0.0,
+        up.x,      up.y,      up.z,      0.0,
+        forward.x, forward.y, forward.z, 0.0,
+        0.0,       0.0,       0.0,       1.0,
     );
 
     let translate = Mat4::new(
-        1.0, 0.0, 0.0, -camera_pos.x,
-        0.0, 1.0, 0.0, -camera_pos.y,
-        0.0, 0.0, 1.0, -camera_pos.z,
+        1.0, 0.0, 0.0, -eye.x,
+        0.0, 1.0, 0.0, -eye.y,
+        0.0, 0.0, 1.0, -eye.z,
         0.0, 0.0, 0.0, 1.0,
     );
 
     let scale = Mat4::new(
-        zoom, 0.0, 0.0, screen_center.x + screen_bias.x,
-        0.0,  zoom, 0.0, screen_center.y + screen_bias.y,
-        0.0, 0.0,  zoom, screen_bias.z,
-        0.0, 0.0, 0.0,   1.0,
+        zoom, 0.0,  0.0,  screen_center.x + screen_bias.x,
+        0.0,  zoom, 0.0,  screen_center.y + screen_bias.y,
+        0.0,  0.0,  zoom, screen_bias.z,
+        0.0,  0.0,  0.0,  1.0,
     );
 
     scale * rot * translate
@@ -199,20 +198,19 @@ fn main() {
 
     // Nave y cámara
     let ship_scale = 86.0;
-    let mut camera_distance = 160.0;
+    let mut camera_distance = 230.0;
     let camera_height = 140.0;
-    let camera_pitch = 0.36;
+    let camera_pitch = 0.8;
     // Desplaza el “centro” de la pantalla hacia arriba para que la nave quede en el tercio inferior
-    let screen_bias = Vec3::new(0.0, 170.0, 0.0);
+    let screen_bias = Vec3::new(0.0, 140.0, 0.0);
     let mut ship = ShipState {
-        position: Vec3::new(-60.0, -60.0, 0.0),
+        position: Vec3::new(0.0, -220.0, 0.0),
         velocity: Vec3::new(0.0, 0.0, 0.0),
         yaw: std::f32::consts::FRAC_PI_2,
     };
     let mut camera = Camera {
         position: ship.position + Vec3::new(0.0, 0.0, camera_height),
         zoom: 1.0,
-        pitch: camera_pitch,
         screen_bias,
     };
 
@@ -282,14 +280,16 @@ fn main() {
         }
         handle_camera_distance(&window, &mut camera_distance, dt);
 
-        // === CÁMARA SIGUIENDO A LA NAVE ===
-        let chase_offset = ship.forward() * camera_distance;
-        camera.position = ship.position - chase_offset + Vec3::new(0.0, 0.0, camera_height);
+        // === CÁMARA SIGUIENDO A LA NAVE (LOOK-AT) ===
+        let forward = ship.forward().normalize();
+        let eye = ship.position - forward * camera_distance + Vec3::new(0.0, 0.0, camera_height);
+        let mut center = ship.position + forward * 200.0;
+        center.z -= camera_pitch; // inclina la mirada hacia abajo
+        camera.position = eye;
 
-        let view_matrix = build_view_matrix(
-            camera.position,
-            ship.yaw,         // la cámara mira hacia donde apunta la nave
-            camera.pitch,     // inclinada un poco hacia abajo
+        let view_matrix = build_view_matrix_lookat(
+            eye,
+            center,
             camera.zoom,
             screen_center,
             camera.screen_bias,
@@ -409,7 +409,11 @@ fn main() {
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
         // Nave
-        let ship_rotation = Vec3::new(0.0, ship.yaw, 0.0);
+        let ship_rotation = Vec3::new(
+            0.0,
+            0.0,
+            ship.yaw + std::f32::consts::FRAC_PI_2,
+        );
         let ship_model = create_model_matrix(ship.position, ship_scale, ship_rotation);
         let ship_uniforms = Uniforms {
             model_matrix: ship_model,
