@@ -1,50 +1,51 @@
-use nalgebra_glm::{Vec3, Vec4, Mat3};
-use crate::vertex::Vertex;
-use crate::Uniforms;
 use crate::color::Color;
+use crate::vertex::Vertex;
 use crate::PlanetShader;
+use crate::Uniforms;
+use nalgebra_glm::{Mat3, Vec3, Vec4};
 
 pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
-
-    let position = Vec4::new(
-        vertex.position.x,
-        vertex.position.y,
-        vertex.position.z,
-        1.0
-    );
+    let position = Vec4::new(vertex.position.x, vertex.position.y, vertex.position.z, 1.0);
     let world_position = uniforms.model_matrix * position;
     let transformed = uniforms.view_matrix * world_position;
 
-    let w = if transformed.w.abs() < 1e-5 { 1.0 } else { transformed.w };
-    let transformed_position = Vec3::new(
-        transformed.x / w,
-        transformed.y / w,
-        transformed.z / w
-    );
+    let w = if transformed.w.abs() < 1e-5 {
+        1.0
+    } else {
+        transformed.w
+    };
+    let transformed_position = Vec3::new(transformed.x / w, transformed.y / w, transformed.z / w);
 
     let model_mat3 = Mat3::new(
-        uniforms.model_matrix[0], uniforms.model_matrix[1], uniforms.model_matrix[2],
-        uniforms.model_matrix[4], uniforms.model_matrix[5], uniforms.model_matrix[6],
-        uniforms.model_matrix[8], uniforms.model_matrix[9], uniforms.model_matrix[10]
+        uniforms.model_matrix[0],
+        uniforms.model_matrix[1],
+        uniforms.model_matrix[2],
+        uniforms.model_matrix[4],
+        uniforms.model_matrix[5],
+        uniforms.model_matrix[6],
+        uniforms.model_matrix[8],
+        uniforms.model_matrix[9],
+        uniforms.model_matrix[10],
     );
-    let normal_matrix = model_mat3.transpose().try_inverse().unwrap_or(Mat3::identity());
+    let normal_matrix = model_mat3
+        .transpose()
+        .try_inverse()
+        .unwrap_or(Mat3::identity());
     let transformed_normal = normal_matrix * vertex.normal;
 
     let p = vertex.position; // posición original en la esfera (−1..1)
     let t = uniforms.time;
 
     let color = match uniforms.planet_shader {
-        PlanetShader::Star     => star_color(p, t),
-        PlanetShader::Rocky    => rocky_color(p, t),
+        PlanetShader::Star => star_color(p, t),
+        PlanetShader::Rocky => rocky_color(p, t),
         PlanetShader::GasGiant => gas_giant_color(p, t),
-        PlanetShader::Moon     => moon_color(p, t),
-        PlanetShader::Lava     => lava_planet_color(p, t),
+        PlanetShader::Moon => moon_color(p, t),
+        PlanetShader::Lava => lava_planet_color(p, t),
         PlanetShader::IceGiant => ice_giant_color(p, t),
         PlanetShader::RingRock => ring_rock_color(p, t),
         PlanetShader::Spaceship => spaceship_color(p, transformed_normal.normalize()),
     };
-
-
 
     Vertex {
         position: vertex.position,
@@ -67,13 +68,13 @@ fn star_color(p: Vec3, time: f32) -> Color {
     } else if r < 0.8 {
         Color::new(255, 220, 120) // medio amarillo
     } else {
-        Color::new(255, 150, 40)  // borde más naranja
+        Color::new(255, 150, 40) // borde más naranja
     };
 
     // Capa 2: “granulación” solar (manchitas claras/osc)
     let granulation = (p.x * 20.0 + time * 4.0).sin()
-                    * (p.y * 24.0 - time * 3.0).cos()
-                    * (p.z * 18.0 + time * 2.0).sin();
+        * (p.y * 24.0 - time * 3.0).cos()
+        * (p.z * 18.0 + time * 2.0).sin();
     let mut color = base;
 
     if granulation > 0.3 {
@@ -86,7 +87,7 @@ fn star_color(p: Vec3, time: f32) -> Color {
 
     // Capa 3: ligera “oscurecimiento de borde” (limb darkening)
     let edge_factor = (1.0 - r).clamp(0.0, 1.0); // 1 en centro, 0 en borde
-    let darken = 0.6 + 0.4 * edge_factor;       // 0.6 en borde, 1 en centro
+    let darken = 0.6 + 0.4 * edge_factor; // 0.6 en borde, 1 en centro
 
     Color::new(
         (color.r as f32 * darken) as u8,
@@ -96,14 +97,13 @@ fn star_color(p: Vec3, time: f32) -> Color {
 }
 
 fn rocky_color(p: Vec3, time: f32) -> Color {
-    let latitude = p.y;          // -1..1
+    let latitude = p.y; // -1..1
 
     // Capa 1: océanos azules
     let mut color = Color::new(20, 60, 150);
 
     // Capa 2: continentes (ruido senoidal)
-    let continents = (p.x * 4.0 + time * 0.2).sin()
-                   + (p.z * 3.0 - time * 0.1).cos();
+    let continents = (p.x * 4.0 + time * 0.2).sin() + (p.z * 3.0 - time * 0.1).cos();
     if continents > 0.5 {
         // tierra verde
         color = Color::new(30, 120, 40);
@@ -139,17 +139,15 @@ fn gas_giant_color(p: Vec3, time: f32) -> Color {
     let mut color = Color::new(210, 180, 140);
 
     // Capa 2: bandas horizontales (ancho variable)
-    let band_pattern = (latitude * 10.0 + time * 0.3).sin()
-                     + (latitude * 4.0).sin() * 0.5;
+    let band_pattern = (latitude * 10.0 + time * 0.3).sin() + (latitude * 4.0).sin() * 0.5;
     if band_pattern > 0.5 {
         color = Color::new(235, 220, 200); // banda clara
     } else if band_pattern < -0.5 {
-        color = Color::new(170, 120, 90);  // banda oscura
+        color = Color::new(170, 120, 90); // banda oscura
     }
 
     // Capa 3: turbulencias finas
-    let swirl = ((p.x * 8.0 + time * 0.3).sin()
-               * (p.z * 6.0 - time * 0.2).cos()).abs();
+    let swirl = ((p.x * 8.0 + time * 0.3).sin() * (p.z * 6.0 - time * 0.2).cos()).abs();
     if swirl > 0.7 {
         color = Color::new(240, 230, 215); // nubecitas muy claras
     }
@@ -167,8 +165,6 @@ fn gas_giant_color(p: Vec3, time: f32) -> Color {
 
     color
 }
-
-
 
 fn moon_color(p: Vec3, _time: f32) -> Color {
     let mut color = Color::new(200, 200, 200); // gris claro
@@ -191,22 +187,19 @@ fn moon_color(p: Vec3, _time: f32) -> Color {
     color
 }
 
-
 // Planeta volcánico (Lava)
 fn lava_planet_color(p: Vec3, time: f32) -> Color {
     // Capa 1: roca oscura
     let mut color = Color::new(40, 15, 10);
 
     // Capa 2: zonas de lava base
-    let lava_noise = (p.x * 6.0 + time * 1.0).sin().abs()
-                   + (p.z * 8.0 - time * 0.8).sin().abs();
+    let lava_noise = (p.x * 6.0 + time * 1.0).sin().abs() + (p.z * 8.0 - time * 0.8).sin().abs();
     if lava_noise > 1.3 {
         color = Color::new(200, 80, 20);
     }
 
     // Capa 3: grietas brillantes (lava muy caliente)
-    let cracks = (p.x * 14.0 + time * 2.5).sin()
-               * (p.z * 16.0 - time * 2.0).cos();
+    let cracks = (p.x * 14.0 + time * 2.5).sin() * (p.z * 16.0 - time * 2.0).cos();
     if cracks > 0.7 {
         color = Color::new(255, 200, 80);
     }
@@ -227,8 +220,7 @@ fn ice_giant_color(p: Vec3, time: f32) -> Color {
     let mut color = Color::new(10, 30, 80);
 
     // Capa 2: bandas frías azul claro
-    let bands = (latitude * 9.0 + time * 0.2).sin()
-              + (p.z * 5.0).cos() * 0.5;
+    let bands = (latitude * 9.0 + time * 0.2).sin() + (p.z * 5.0).cos() * 0.5;
     if bands > 0.5 {
         color = Color::new(40, 130, 200);
     } else if bands < -0.5 {

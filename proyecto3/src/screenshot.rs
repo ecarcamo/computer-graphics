@@ -1,4 +1,4 @@
-use image::{RgbImage, Rgb};
+use image::{Rgb, RgbImage};
 
 pub fn save_screenshot(buffer: &Vec<u32>, width: usize, height: usize, filename: &str) {
     let mut img = RgbImage::new(width as u32, height as u32);

@@ -1,46 +1,45 @@
-use nalgebra_glm::{Vec3, Mat4, Vec4};
+use crate::fragment::Fragment;
 use minifb::{Key, Window, WindowOptions};
+use nalgebra_glm::{Mat4, Vec3, Vec4};
+use rayon::prelude::*;
 use std::time::Duration;
 use std::time::Instant;
-use rayon::prelude::*;
-use crate::fragment::Fragment;
 
-mod framebuffer;
-mod triangle;
-mod line;
-mod vertex;
-mod obj;
 mod color;
 mod fragment;
-mod shaders;
+mod framebuffer;
+mod line;
+mod obj;
 mod screenshot;
+mod shaders;
+mod triangle;
+mod vertex;
 
-use screenshot::save_screenshot;
 use framebuffer::Framebuffer;
-use vertex::Vertex;
 use obj::Obj;
-use triangle::triangle;
+use screenshot::save_screenshot;
 use shaders::vertex_shader;
+use triangle::triangle;
+use vertex::Vertex;
 
 #[derive(Clone, Copy)]
 pub enum PlanetShader {
-    Star,       //Sol
-    Rocky,      // Planeta rocoso tipo tierra
-    GasGiant,   // Júpiter
-    Moon,       // Luna
-    Lava,       // Planeta volcánico extra
-    IceGiant,   // Planeta de huelo extra
-    RingRock,   // "piedritas" de los anillos
-    Spaceship,  // Nave importada de lab4
+    Star,      //Sol
+    Rocky,     // Planeta rocoso tipo tierra
+    GasGiant,  // Júpiter
+    Moon,      // Luna
+    Lava,      // Planeta volcánico extra
+    IceGiant,  // Planeta de huelo extra
+    RingRock,  // "piedritas" de los anillos
+    Spaceship, // Nave importada de lab4
 }
 
-const STAR: usize  = 0;
-const LAVA: usize  = 1;
+const STAR: usize = 0;
+const LAVA: usize = 1;
 const ROCKY: usize = 2;
-const MOON: usize  = 3;
-const GAS: usize   = 4;
-const ICE: usize   = 5;
-
+const MOON: usize = 3;
+const GAS: usize = 4;
+const ICE: usize = 5;
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -69,40 +68,42 @@ impl ShipState {
     }
 }
 
-
 fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
     let (sin_x, cos_x) = rotation.x.sin_cos();
     let (sin_y, cos_y) = rotation.y.sin_cos();
     let (sin_z, cos_z) = rotation.z.sin_cos();
 
     let rotation_matrix_x = Mat4::new(
-        1.0,  0.0,    0.0,   0.0,
-        0.0,  cos_x, -sin_x, 0.0,
-        0.0,  sin_x,  cos_x, 0.0,
-        0.0,  0.0,    0.0,   1.0,
+        1.0, 0.0, 0.0, 0.0, 0.0, cos_x, -sin_x, 0.0, 0.0, sin_x, cos_x, 0.0, 0.0, 0.0, 0.0, 1.0,
     );
 
     let rotation_matrix_y = Mat4::new(
-        cos_y,  0.0,  sin_y, 0.0,
-        0.0,    1.0,  0.0,   0.0,
-        -sin_y, 0.0,  cos_y, 0.0,
-        0.0,    0.0,  0.0,   1.0,
+        cos_y, 0.0, sin_y, 0.0, 0.0, 1.0, 0.0, 0.0, -sin_y, 0.0, cos_y, 0.0, 0.0, 0.0, 0.0, 1.0,
     );
 
     let rotation_matrix_z = Mat4::new(
-        cos_z, -sin_z, 0.0, 0.0,
-        sin_z,  cos_z, 0.0, 0.0,
-        0.0,    0.0,  1.0, 0.0,
-        0.0,    0.0,  0.0, 1.0,
+        cos_z, -sin_z, 0.0, 0.0, sin_z, cos_z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     );
 
     let rotation_matrix = rotation_matrix_z * rotation_matrix_y * rotation_matrix_x;
 
     let transform_matrix = Mat4::new(
-        scale, 0.0,   0.0,   translation.x,
-        0.0,   scale, 0.0,   translation.y,
-        0.0,   0.0,   scale, translation.z,
-        0.0,   0.0,   0.0,   1.0,
+        scale,
+        0.0,
+        0.0,
+        translation.x,
+        0.0,
+        scale,
+        0.0,
+        translation.y,
+        0.0,
+        0.0,
+        scale,
+        translation.z,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
     );
 
     transform_matrix * rotation_matrix
@@ -122,24 +123,31 @@ fn build_view_matrix_lookat(
     let up = forward.cross(&right);
 
     let rot = Mat4::new(
-        right.x,   right.y,   right.z,   0.0,
-        up.x,      up.y,      up.z,      0.0,
-        forward.x, forward.y, forward.z, 0.0,
-        0.0,       0.0,       0.0,       1.0,
+        right.x, right.y, right.z, 0.0, up.x, up.y, up.z, 0.0, forward.x, forward.y, forward.z,
+        0.0, 0.0, 0.0, 0.0, 1.0,
     );
 
     let translate = Mat4::new(
-        1.0, 0.0, 0.0, -eye.x,
-        0.0, 1.0, 0.0, -eye.y,
-        0.0, 0.0, 1.0, -eye.z,
-        0.0, 0.0, 0.0, 1.0,
+        1.0, 0.0, 0.0, -eye.x, 0.0, 1.0, 0.0, -eye.y, 0.0, 0.0, 1.0, -eye.z, 0.0, 0.0, 0.0, 1.0,
     );
 
     let scale = Mat4::new(
-        zoom, 0.0,  0.0,  screen_center.x + screen_bias.x,
-        0.0,  zoom, 0.0,  screen_center.y + screen_bias.y,
-        0.0,  0.0,  zoom, screen_bias.z,
-        0.0,  0.0,  0.0,  1.0,
+        zoom,
+        0.0,
+        0.0,
+        screen_center.x + screen_bias.x,
+        0.0,
+        zoom,
+        0.0,
+        screen_center.y + screen_bias.y,
+        0.0,
+        0.0,
+        zoom,
+        screen_bias.z,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
     );
 
     scale * rot * translate
@@ -148,7 +156,7 @@ fn build_view_matrix_lookat(
 fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Vertex]) {
     // 1) Vertex Shader (paralelo)
     let transformed_vertices: Vec<Vertex> = vertex_array
-        .par_iter()                              // <-- paralelo
+        .par_iter() // <-- paralelo
         .map(|vertex| vertex_shader(vertex, uniforms))
         .collect();
 
@@ -166,7 +174,7 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
 
     // 3) Rasterización de triángulos (paralelo)
     let fragments: Vec<Fragment> = triangles
-        .par_iter()   // <-- cada triángulo en paralelo
+        .par_iter() // <-- cada triángulo en paralelo
         .flat_map(|tri| triangle(&tri[0], &tri[1], &tri[2]))
         .collect();
 
@@ -191,10 +199,10 @@ fn main() {
     let frame_delay = Duration::from_millis(16);
 
     // Escalas base de los planetas
-    let sun_scale   = 50.0;
+    let sun_scale = 50.0;
     let rocky_scale = 35.0;
-    let gas_scale   = 45.0;
-    let moon_scale  = 15.0;
+    let gas_scale = 45.0;
+    let moon_scale = 15.0;
 
     // Nave y cámara
     let ship_scale = 86.0;
@@ -215,7 +223,7 @@ fn main() {
     };
 
     // Factores fijos para los planetas (sin teclas que alteren)
-    let extra_rot   = [0.0f32; 6];
+    let extra_rot = [0.0f32; 6];
     let extra_scale = [1.0f32; 6];
 
     // Tiempo acumulado
@@ -287,13 +295,8 @@ fn main() {
         center.z -= camera_pitch; // inclina la mirada hacia abajo
         camera.position = eye;
 
-        let view_matrix = build_view_matrix_lookat(
-            eye,
-            center,
-            camera.zoom,
-            screen_center,
-            camera.screen_bias,
-        );
+        let view_matrix =
+            build_view_matrix_lookat(eye, center, camera.zoom, screen_center, camera.screen_bias);
 
         framebuffer.clear();
 
@@ -409,11 +412,7 @@ fn main() {
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
         // Nave
-        let ship_rotation = Vec3::new(
-            0.0,
-            0.0,
-            ship.yaw + std::f32::consts::FRAC_PI_2,
-        );
+        let ship_rotation = Vec3::new(0.0, 0.0, ship.yaw + std::f32::consts::FRAC_PI_2);
         let ship_model = create_model_matrix(ship.position, ship_scale, ship_rotation);
         let ship_uniforms = Uniforms {
             model_matrix: ship_model,
@@ -454,13 +453,15 @@ fn main() {
             println!("Screenshot guardado: {}", filename);
             std::thread::sleep(Duration::from_millis(200)); // evita repetir muchas capturas
         }
-
     }
 }
 
-
 fn update_ship_controls(window: &Window, ship: &mut ShipState, dt: f32) {
-    let accel = if window.is_key_down(Key::LeftShift) { 320.0 } else { 200.0 };
+    let accel = if window.is_key_down(Key::LeftShift) {
+        320.0
+    } else {
+        200.0
+    };
     let rot_speed = 1.8;
 
     if window.is_key_down(Key::A) {
@@ -507,10 +508,12 @@ fn draw_starfield(framebuffer: &mut Framebuffer, stars: &[Vec3], view_matrix: &M
     framebuffer.set_current_color(0x111126);
     for (i, star) in stars.iter().enumerate() {
         if let Some((sx, sy, depth)) = project_point(view_matrix, *star) {
-            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32 {
+            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32
+            {
                 let idx = i as u32;
                 let twinkle = 0x12 + ((idx.wrapping_mul(31) & 0x0F) as u8);
-                let color = (twinkle as u32) << 16 | (twinkle as u32) << 8 | (0x30 + (idx % 32) as u32);
+                let color =
+                    (twinkle as u32) << 16 | (twinkle as u32) << 8 | (0x30 + (idx % 32) as u32);
                 framebuffer.set_current_color(color);
                 framebuffer.point(sx as usize, sy as usize, depth);
             }
@@ -525,7 +528,8 @@ fn draw_orbit_ring(framebuffer: &mut Framebuffer, view_matrix: &Mat4, radius: f3
         let t = i as f32 / steps as f32 * std::f32::consts::TAU;
         let world = Vec3::new(radius * t.cos(), radius * t.sin(), 0.0);
         if let Some((sx, sy, depth)) = project_point(view_matrix, world) {
-            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32 {
+            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32
+            {
                 framebuffer.point(sx as usize, sy as usize, depth);
             }
         }

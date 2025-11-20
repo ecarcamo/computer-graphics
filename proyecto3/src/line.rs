@@ -18,7 +18,12 @@ pub fn line(a: &Vertex, b: &Vertex) -> Vec<Fragment> {
     let mut y = ay;
 
     while x != bx || y != by {
-        fragments.push(Fragment::new(x as f32, y as f32, a.color, a.transformed_position.z));
+        fragments.push(Fragment::new(
+            x as f32,
+            y as f32,
+            a.color,
+            a.transformed_position.z,
+        ));
         let e2 = 2 * err;
         if e2 >= dy {
             err += dy;
@@ -29,6 +34,11 @@ pub fn line(a: &Vertex, b: &Vertex) -> Vec<Fragment> {
             y += sy;
         }
     }
-    fragments.push(Fragment::new(bx as f32, by as f32, b.color, b.transformed_position.z));
+    fragments.push(Fragment::new(
+        bx as f32,
+        by as f32,
+        b.color,
+        b.transformed_position.z,
+    ));
     fragments
 }

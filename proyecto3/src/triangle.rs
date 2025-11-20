@@ -1,8 +1,8 @@
-use nalgebra_glm::{Vec3, dot};
-use crate::fragment::Fragment;
-use crate::vertex::Vertex;
-use crate::line::line;
 use crate::color::Color;
+use crate::fragment::Fragment;
+use crate::line::line;
+use crate::vertex::Vertex;
+use nalgebra_glm::{dot, Vec3};
 
 pub fn _triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
     let mut fragments = Vec::new();
@@ -33,15 +33,11 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
 
             let (w1, w2, w3) = barycentric_coordinates(&point, &a, &b, &c, triangle_area);
 
-            if w1 >= 0.0 && w1 <= 1.0 &&
-               w2 >= 0.0 && w2 <= 1.0 &&
-               w3 >= 0.0 && w3 <= 1.0 {
-
+            if w1 >= 0.0 && w1 <= 1.0 && w2 >= 0.0 && w2 <= 1.0 && w3 >= 0.0 && w3 <= 1.0 {
                 // ===== Normal interpolada =====
-                let normal =
-                    v1.transformed_normal * w1 +
-                    v2.transformed_normal * w2 +
-                    v3.transformed_normal * w3;
+                let normal = v1.transformed_normal * w1
+                    + v2.transformed_normal * w2
+                    + v3.transformed_normal * w3;
                 let normal = normal.normalize();
 
                 // Intensidad de la luz
@@ -49,15 +45,9 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 let ambient = 0.25;
                 let intensity = (ambient + diffuse).min(1.0);
 
-                let r = v1.color.r as f32 * w1
-                      + v2.color.r as f32 * w2
-                      + v3.color.r as f32 * w3;
-                let g = v1.color.g as f32 * w1
-                      + v2.color.g as f32 * w2
-                      + v3.color.g as f32 * w3;
-                let b = v1.color.b as f32 * w1
-                      + v2.color.b as f32 * w2
-                      + v3.color.b as f32 * w3;
+                let r = v1.color.r as f32 * w1 + v2.color.r as f32 * w2 + v3.color.r as f32 * w3;
+                let g = v1.color.g as f32 * w1 + v2.color.g as f32 * w2 + v3.color.g as f32 * w3;
+                let b = v1.color.b as f32 * w1 + v2.color.b as f32 * w2 + v3.color.b as f32 * w3;
 
                 let base_color = Color::new(r as u8, g as u8, b as u8);
 
@@ -68,7 +58,6 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
                 let depth = a.z;
 
                 fragments.push(Fragment::new(x as f32, y as f32, lit_color, depth));
-
             }
         }
     }
