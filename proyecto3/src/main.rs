@@ -1,7 +1,6 @@
-use nalgebra_glm::{Vec3, Mat4};
+use nalgebra_glm::{Vec3, Mat4, Vec4};
 use minifb::{Key, Window, WindowOptions};
 use std::time::Duration;
-use std::f32::consts::PI;
 use std::time::Instant;
 use rayon::prelude::*;
 use crate::fragment::Fragment;
@@ -29,9 +28,10 @@ pub enum PlanetShader {
     Rocky,      // Planeta rocoso tipo tierra
     GasGiant,   // Júpiter
     Moon,       // Luna
-    Lava,       // PLantea volcánico extra
+    Lava,       // Planeta volcánico extra
     IceGiant,   // Planeta de huelo extra
     RingRock,   // "piedritas" de los anillos
+    Spaceship,  // Nave importada de lab4
 }
 
 const STAR: usize  = 0;
@@ -44,8 +44,30 @@ const ICE: usize   = 5;
 
 pub struct Uniforms {
     model_matrix: Mat4,
+    view_matrix: Mat4,
     planet_shader: PlanetShader,
     time: f32,
+}
+
+struct Camera {
+    position: Vec3,
+    zoom: f32,
+    pitch: f32,
+    screen_bias: Vec3, // desplaza el centro de proyección para colocar la nave en pantalla
+}
+
+struct ShipState {
+    position: Vec3,
+    velocity: Vec3,
+    yaw: f32,
+}
+
+impl ShipState {
+    fn forward(&self) -> Vec3 {
+        let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
+        // si ves que la nave avanza "de lado", aquí es donde se cambia el eje
+        Vec3::new(cos_yaw, sin_yaw, 0.0)
+    }
 }
 
 
@@ -85,6 +107,43 @@ fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3) -> Mat4 {
     );
 
     transform_matrix * rotation_matrix
+}
+
+// === MATRIZ DE VISTA ORIGINAL (ajustada para seguir a la nave) ===
+fn build_view_matrix(
+    camera_pos: Vec3,
+    yaw: f32,
+    pitch: f32,
+    zoom: f32,
+    screen_center: Vec3,
+    screen_bias: Vec3,
+) -> Mat4 {
+    // Rotación para alinear la vista con la dirección de la nave (yaw) y un pequeño pitch
+    let (sy, cy) = (-yaw).sin_cos();
+    let (sp, cp) = (-pitch).sin_cos();
+
+    let rot = Mat4::new(
+        cy,      -sy * cp,   -sy * sp,   0.0,
+        sy,       cy * cp,    cy * sp,   0.0,
+        0.0,      -sp,        cp,        0.0,
+        0.0,      0.0,        0.0,       1.0,
+    );
+
+    let translate = Mat4::new(
+        1.0, 0.0, 0.0, -camera_pos.x,
+        0.0, 1.0, 0.0, -camera_pos.y,
+        0.0, 0.0, 1.0, -camera_pos.z,
+        0.0, 0.0, 0.0, 1.0,
+    );
+
+    let scale = Mat4::new(
+        zoom, 0.0, 0.0, screen_center.x + screen_bias.x,
+        0.0,  zoom, 0.0, screen_center.y + screen_bias.y,
+        0.0, 0.0,  zoom, screen_bias.z,
+        0.0, 0.0, 0.0,   1.0,
+    );
+
+    scale * rot * translate
 }
 
 fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Vertex]) {
@@ -129,6 +188,7 @@ fn main() {
     let window_height = 600;
     let framebuffer_width = 900;
     let framebuffer_height = 600;
+    let screen_center = Vec3::new(window_width as f32 * 0.5, window_height as f32 * 0.5, 0.0);
     let frame_delay = Duration::from_millis(16);
 
     // Escalas base de los planetas
@@ -137,13 +197,28 @@ fn main() {
     let gas_scale   = 45.0;
     let moon_scale  = 15.0;
 
-    // Offset global del sistema (para mover con WASD)
-    let mut center_offset = Vec3::new(0.0, 0.0, 0.0);
+    // Nave y cámara
+    let ship_scale = 86.0;
+    let mut camera_distance = 160.0;
+    let camera_height = 140.0;
+    let camera_pitch = 0.36;
+    // Desplaza el “centro” de la pantalla hacia arriba para que la nave quede en el tercio inferior
+    let screen_bias = Vec3::new(0.0, 170.0, 0.0);
+    let mut ship = ShipState {
+        position: Vec3::new(-60.0, -60.0, 0.0),
+        velocity: Vec3::new(0.0, 0.0, 0.0),
+        yaw: std::f32::consts::FRAC_PI_2,
+    };
+    let mut camera = Camera {
+        position: ship.position + Vec3::new(0.0, 0.0, camera_height),
+        zoom: 1.0,
+        pitch: camera_pitch,
+        screen_bias,
+    };
 
-    // Controles por planeta
-    let mut selected_planet: usize = STAR;     // 0 por defecto (sol)
-    let mut extra_rot   = [0.0f32; 6];         // rotación extra en Y
-    let mut extra_scale = [1.0f32; 6];         // escala multiplicativa
+    // Factores fijos para los planetas (sin teclas que alteren)
+    let extra_rot   = [0.0f32; 6];
+    let extra_scale = [1.0f32; 6];
 
     // Tiempo acumulado
     let mut base_time = 0.0f32;
@@ -168,12 +243,13 @@ fn main() {
 
     framebuffer.set_background_color(0x030314);
 
-    // Cargamos la esfera
+    // Geometrías
     let obj = Obj::load("assets/models/sphere.obj").expect("Failed to load sphere");
     let vertex_arrays = obj.get_vertex_array();
+    let ship_obj = Obj::load("assets/models/ship.obj").expect("Failed to load ship");
+    let ship_vertices = ship_obj.get_vertex_array();
 
-    // Centro base de la “cámara”
-    let center = Vec3::new(450.0, 300.0, 0.0);
+    let stars = create_starfield(620, 1400.0);
 
     let mut screenshot_taken = false;
 
@@ -201,18 +277,32 @@ fn main() {
             break;
         }
 
-        // Controles de entrada
-        handle_input(
-            &window,
-            &mut center_offset,
-            &mut selected_planet,
-            &mut extra_rot,
-            &mut extra_scale,
+        if !paused {
+            update_ship_controls(&window, &mut ship, dt);
+        }
+        handle_camera_distance(&window, &mut camera_distance, dt);
+
+        // === CÁMARA SIGUIENDO A LA NAVE ===
+        let chase_offset = ship.forward() * camera_distance;
+        camera.position = ship.position - chase_offset + Vec3::new(0.0, 0.0, camera_height);
+
+        let view_matrix = build_view_matrix(
+            camera.position,
+            ship.yaw,         // la cámara mira hacia donde apunta la nave
+            camera.pitch,     // inclinada un poco hacia abajo
+            camera.zoom,
+            screen_center,
+            camera.screen_bias,
         );
 
-        let center_pos = center + center_offset;
-
         framebuffer.clear();
+
+        draw_starfield(&mut framebuffer, &stars, &view_matrix);
+
+        let center_pos = Vec3::new(0.0, 0.0, 0.0);
+        draw_orbit_ring(&mut framebuffer, &view_matrix, 90.0);
+        draw_orbit_ring(&mut framebuffer, &view_matrix, 140.0);
+        draw_orbit_ring(&mut framebuffer, &view_matrix, 220.0);
 
         // Sol centrado
         let star_model = create_model_matrix(
@@ -223,6 +313,7 @@ fn main() {
 
         let star_uniforms = Uniforms {
             model_matrix: star_model,
+            view_matrix: view_matrix.clone(),
             planet_shader: PlanetShader::Star,
             time: time_sec,
         };
@@ -244,6 +335,7 @@ fn main() {
 
         let lava_uniforms = Uniforms {
             model_matrix: lava_model,
+            view_matrix: view_matrix.clone(),
             planet_shader: PlanetShader::Lava,
             time: time_sec,
         };
@@ -265,6 +357,7 @@ fn main() {
 
         let rocky_uniforms = Uniforms {
             model_matrix: rocky_model,
+            view_matrix: view_matrix.clone(),
             planet_shader: PlanetShader::Rocky,
             time: time_sec,
         };
@@ -286,6 +379,7 @@ fn main() {
 
         let moon_uniforms = Uniforms {
             model_matrix: moon_model,
+            view_matrix: view_matrix.clone(),
             planet_shader: PlanetShader::Moon,
             time: time_sec,
         };
@@ -307,58 +401,23 @@ fn main() {
 
         let gas_uniforms = Uniforms {
             model_matrix: gas_model,
+            view_matrix: view_matrix.clone(),
             planet_shader: PlanetShader::GasGiant,
             time: time_sec,
         };
 
         render(&mut framebuffer, &gas_uniforms, &vertex_arrays);
 
-        // Sistema de anillos (rocas)
-        let ring_radius = gas_scale * 2.1 * extra_scale[GAS];
-        let ring_scale = 5.0 * extra_scale[GAS];
-        let ring_count = 12;
-
-        for i in 0..ring_count {
-            let angle = (i as f32 / ring_count as f32) * 2.0 * PI + time_sec * 0.15;
-
-            let ring_x = gas_x + ring_radius * angle.cos();
-            let ring_y = gas_y + ring_radius * angle.sin();
-
-            let ring_model = create_model_matrix(
-                Vec3::new(ring_x, ring_y, 0.0),
-                ring_scale,
-                Vec3::new(0.0, 0.0, 0.0),
-            );
-
-            let ring_uniforms = Uniforms {
-                model_matrix: ring_model,
-                planet_shader: PlanetShader::RingRock,
-                time: time_sec,
-            };
-
-            render(&mut framebuffer, &ring_uniforms, &vertex_arrays);
-        }
-
-        // Ice Giant (órbita exterior)
-        let ice_orbit_radius = 300.0;
-        let ice_angle = time_sec * 0.18;
-
-        let ice_x = center_pos.x + ice_orbit_radius * ice_angle.cos();
-        let ice_y = center_pos.y + ice_orbit_radius * ice_angle.sin();
-
-        let ice_model = create_model_matrix(
-            Vec3::new(ice_x, ice_y, 0.0),
-            40.0 * extra_scale[ICE],
-            Vec3::new(0.0, time_sec * 0.35 + extra_rot[ICE], 0.0),
-        );
-
-        let ice_uniforms = Uniforms {
-            model_matrix: ice_model,
-            planet_shader: PlanetShader::IceGiant,
+        // Nave
+        let ship_rotation = Vec3::new(0.0, ship.yaw, 0.0);
+        let ship_model = create_model_matrix(ship.position, ship_scale, ship_rotation);
+        let ship_uniforms = Uniforms {
+            model_matrix: ship_model,
+            view_matrix: view_matrix.clone(),
+            planet_shader: PlanetShader::Spaceship,
             time: time_sec,
         };
-
-        render(&mut framebuffer, &ice_uniforms, &vertex_arrays);
+        render(&mut framebuffer, &ship_uniforms, &ship_vertices);
 
         // ACTUALIZAR VENTANA
         window
@@ -396,73 +455,100 @@ fn main() {
 }
 
 
-fn handle_input(
-    window: &Window,
-    center_offset: &mut Vec3,
-    selected_planet: &mut usize,
-    extra_rot: &mut [f32; 6],
-    extra_scale: &mut [f32; 6],
-) {
-    // Mover el sistema con WASD
-    let move_step = 8.0;
-    if window.is_key_down(Key::D) {
-        center_offset.x += move_step;
-    }
+fn update_ship_controls(window: &Window, ship: &mut ShipState, dt: f32) {
+    let accel = if window.is_key_down(Key::LeftShift) { 320.0 } else { 200.0 };
+    let rot_speed = 1.8;
+
     if window.is_key_down(Key::A) {
-        center_offset.x -= move_step;
+        ship.yaw -= rot_speed * dt;
     }
+    if window.is_key_down(Key::D) {
+        ship.yaw += rot_speed * dt;
+    }
+
+    let mut thrust: f32 = 0.0;
     if window.is_key_down(Key::W) {
-        center_offset.y -= move_step;
+        thrust += accel;
     }
     if window.is_key_down(Key::S) {
-        center_offset.y += move_step;
+        thrust -= accel * 0.6;
     }
 
-    // Seleccionar planeta con 1-6
-    if window.is_key_down(Key::Key1) {
-        *selected_planet = STAR;
-    }
-    if window.is_key_down(Key::Key2) {
-        *selected_planet = LAVA;
-    }
-    if window.is_key_down(Key::Key3) {
-        *selected_planet = ROCKY;
-    }
-    if window.is_key_down(Key::Key4) {
-        *selected_planet = MOON;
-    }
-    if window.is_key_down(Key::Key5) {
-        *selected_planet = GAS;
-    }
-    if window.is_key_down(Key::Key6) {
-        *selected_planet = ICE;
+    if thrust.abs() > f32::EPSILON {
+        ship.velocity += ship.forward() * thrust * dt;
     }
 
-    // Rotar planeta seleccionado con Z / X
-    let rot_step = 0.05;
-    if window.is_key_down(Key::Z) {
-        extra_rot[*selected_planet] -= rot_step;
-    }
-    if window.is_key_down(Key::X) {
-        extra_rot[*selected_planet] += rot_step;
+    ship.velocity *= 0.98_f32;
+    let speed = ship.velocity.norm();
+    let max_speed = 260.0;
+    if speed > max_speed && speed > f32::EPSILON {
+        ship.velocity = ship.velocity / speed * max_speed;
     }
 
-    // Escalar planeta seleccionado con C / V
-    let scale_step = 0.02;
-    if window.is_key_down(Key::C) {
-        extra_scale[*selected_planet] *= 1.0 + scale_step;
-    }
-    if window.is_key_down(Key::V) {
-        extra_scale[*selected_planet] *= 1.0 - scale_step;
-    }
+    ship.position += ship.velocity * dt;
+}
 
-    // Clamp para que no exploten
-    for s in extra_scale.iter_mut() {
-        if *s < 0.2 {
-            *s = 0.2;
-        }
-        if *s > 3.0 {
-            *s = 3.0;
+fn handle_camera_distance(window: &Window, camera_distance: &mut f32, dt: f32) {
+    let speed = 140.0;
+    if window.is_key_down(Key::Up) {
+        *camera_distance -= speed * dt;
+    }
+    if window.is_key_down(Key::Down) {
+        *camera_distance += speed * dt;
+    }
+    *camera_distance = camera_distance.clamp(140.0, 520.0);
+}
+
+fn draw_starfield(framebuffer: &mut Framebuffer, stars: &[Vec3], view_matrix: &Mat4) {
+    framebuffer.set_current_color(0x111126);
+    for (i, star) in stars.iter().enumerate() {
+        if let Some((sx, sy, depth)) = project_point(view_matrix, *star) {
+            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32 {
+                let idx = i as u32;
+                let twinkle = 0x12 + ((idx.wrapping_mul(31) & 0x0F) as u8);
+                let color = (twinkle as u32) << 16 | (twinkle as u32) << 8 | (0x30 + (idx % 32) as u32);
+                framebuffer.set_current_color(color);
+                framebuffer.point(sx as usize, sy as usize, depth);
+            }
         }
     }
+}
+
+fn draw_orbit_ring(framebuffer: &mut Framebuffer, view_matrix: &Mat4, radius: f32) {
+    let steps = 180;
+    framebuffer.set_current_color(0x35354a);
+    for i in 0..steps {
+        let t = i as f32 / steps as f32 * std::f32::consts::TAU;
+        let world = Vec3::new(radius * t.cos(), radius * t.sin(), 0.0);
+        if let Some((sx, sy, depth)) = project_point(view_matrix, world) {
+            if sx >= 0 && sx < framebuffer.width as i32 && sy >= 0 && sy < framebuffer.height as i32 {
+                framebuffer.point(sx as usize, sy as usize, depth);
+            }
+        }
+    }
+}
+
+fn project_point(view_matrix: &Mat4, p: Vec3) -> Option<(i32, i32, f32)> {
+    let hp = Vec4::new(p.x, p.y, p.z, 1.0);
+    let tp = view_matrix * hp;
+    let w = if tp.w.abs() < 1e-5 { 1.0 } else { tp.w };
+    let sx = (tp.x / w).round() as i32;
+    let sy = (tp.y / w).round() as i32;
+    let depth = tp.z / w;
+    Some((sx, sy, depth))
+}
+
+fn create_starfield(count: usize, spread: f32) -> Vec<Vec3> {
+    let mut seed = 123_987u32;
+    let mut stars = Vec::with_capacity(count);
+    for _ in 0..count {
+        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        let rx = (seed as f32 / u32::MAX as f32 - 0.5) * 2.0;
+        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        let ry = (seed as f32 / u32::MAX as f32 - 0.5) * 2.0;
+        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        let rz = (seed as f32 / u32::MAX as f32) * -200.0;
+        stars.push(Vec3::new(rx * spread, ry * spread, rz));
+    }
+    stars
 }

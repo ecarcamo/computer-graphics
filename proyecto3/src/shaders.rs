@@ -12,7 +12,8 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
         vertex.position.z,
         1.0
     );
-    let transformed = uniforms.model_matrix * position;
+    let world_position = uniforms.model_matrix * position;
+    let transformed = uniforms.view_matrix * world_position;
 
     let w = if transformed.w.abs() < 1e-5 { 1.0 } else { transformed.w };
     let transformed_position = Vec3::new(
@@ -40,6 +41,7 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
         PlanetShader::Lava     => lava_planet_color(p, t),
         PlanetShader::IceGiant => ice_giant_color(p, t),
         PlanetShader::RingRock => ring_rock_color(p, t),
+        PlanetShader::Spaceship => spaceship_color(p, transformed_normal.normalize()),
     };
 
 
@@ -95,7 +97,6 @@ fn star_color(p: Vec3, time: f32) -> Color {
 
 fn rocky_color(p: Vec3, time: f32) -> Color {
     let latitude = p.y;          // -1..1
-    let longitude = p.z;         // aproximación
 
     // Capa 1: océanos azules
     let mut color = Color::new(20, 60, 150);
@@ -271,4 +272,31 @@ fn ring_rock_color(p: Vec3, _time: f32) -> Color {
     }
 
     color
+}
+
+fn spaceship_color(p: Vec3, normal: Vec3) -> Color {
+    let black_metal = Color::new(20, 20, 25);
+    let dark_metal = Color::new(40, 40, 45);
+    let dark_red = Color::new(120, 20, 20);
+    let mid_red = Color::new(180, 40, 40);
+    let bright_red = Color::new(220, 60, 60);
+    let light_red = Color::new(255, 80, 80);
+
+    let base = if p.y > 0.35 || p.y < -0.35 {
+        black_metal
+    } else if normal.y.abs() > 0.6 {
+        dark_metal
+    } else if p.y.abs() < 0.12 {
+        light_red
+    } else if p.y > 0.0 {
+        mid_red.lerp(&bright_red, 0.7)
+    } else {
+        mid_red.lerp(&bright_red, 0.3)
+    };
+
+    if (p.x.abs() + p.z.abs()) > 1.6 {
+        dark_red
+    } else {
+        base
+    }
 }
