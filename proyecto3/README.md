@@ -1,206 +1,84 @@
-# 🌌 **Laboratorio 5 **
+# 🚀 Proyecto 3 — Space Travel
 
-Este proyecto implementa un **software renderer** escrito completamente en Rust, capaz de generar un **sistema solar procedural** utilizando **únicamente shaders de color** (sin texturas ni materiales).
-Cada planeta, estrella, luna y anillo es generado mediante funciones matemáticas, ruido y capas de color aplicadas directamente en el fragment shader.
-
-Incluye animaciones, rotación, órbitas, controles manuales, captura de pantalla y paralelización para mejorar el desempeño.
+Este repo desarrolla un **software renderer completo en Rust** que combina un sistema solar procedural con una **nave que actúa como cámara**. La simulación usa únicamente shaders de color, sin texturas externas, y la cámara siempre sigue la dirección real de la nave para que sientas que estás pilotando el vehículo entre los planetas.
 
 ---
 
-# 🎥 Video demostrativo
+## 🎥 Video demostrativo
 
-👉 **[https://youtu.be/i75bjKmrTxE](https://youtu.be/i75bjKmrTxE)**
-
----
-
-# ⭐ Características del proyecto
-
-## ✔ Planetas requeridos
-
-* 🌞 **Sol**
-* 🌍 **Planeta Rocoso**
-* 🪐 **Gigante Gaseoso**
-
-## ✔ Planetas extra (30 pts)
-
-* 🌋 **Planeta Volcánico – “Vulkar”**
-* 🌊 **Planeta Azul Oceánico – “Aquahelion”**
-* ❄ **Gigante de Hielo – “Glaciaron”**
-
-## ✔ Luna (20 pts)
-
-* 🌘 **Lunaris** orbitando el planeta rocoso.
-
-## ✔ Sistema de anillos (20 pts)
-
-* 🪐 **Jovarik**, el gigante gaseoso, contiene **12 rocas** orbitando como anillos.
+👉 **[https://youtu.be/KwKRuNuw6I8](https://youtu.be/KwKRuNuw6I8)**
 
 ---
 
-# 🎨 Complejidad de shaders
+## 🌌 ¿Qué se renderiza?
 
-Cada planeta se generó mediante **capas matemáticas de color**, logrando entre **3 y 5 capas**, lo que lo coloca en la categoría de **40 puntos (máxima complejidad)**.
+![Sistema solar](planetas.png)
 
-Ejemplos de capas utilizadas:
+* **Sol** y varios planetas con color procedimental (planeta rocoso, volcánico, gaseoso, luna e ice-giant).
+ * Cada cuerpo rota y orbita con funciones trigonométricas; el sistema mantiene sus movimientos automáticos.
+ * Se añaden **órbitas dibujadas**, un **starfield procedural** y un modelo OBJ para la nave.
 
-* Ruido fractal animado
-* Gradiente radial
-* Bandas atmosféricas
-* Patrones sinusoidales
-* Pulsos de fuego (en Vulkar)
-* Líneas diagonales dinámicas (Aquahelion)
-* Degradado frío con bandas verticales (Gigante de Hielo)
+## 🎮 Experiencia de “space travel”
 
----
+* La **nave define la cámara**: su `forward` determina el `eye`/`center` del look-at y siempre se muestra en el tercio inferior de la pantalla.
+* of controls: `W/S` aceleran/frenan la nave, `A/D` giran, `Shift` boost, `Up/Down` ajustan la distancia de cámara, `P` pausa, `O` toma capturas y `Esc` cierra.
+* Los planetas son **estáticos para las teclas**; únicamente orbitan y rotan en el tiempo. Todo movimiento de usuario controla al vehículo espacial.
 
-# 🖼 Capturas del sistema
+## 📐 Pipeline y arquitectura
 
-Todas las imágenes están generadas desde el renderer:
+1. **Vertex shader** paralelizado (Rayon) aplica transformaciones de modelo + cámara.
+2. **Primitive assembly** junta triángulos del OBJ.
+3. **Rasterización** calcula fragmentos con coordenadas barycentric.
+4. **Fragment shader** pinta cada triángulo en color procedimental (capas de ruido, gradientes y bandas).
+5. **Z-buffer + framebuffer** manejan profundidad y dibujo.
+6. **Cámara** construida con look-at; scroll `Up/Down` mueve el eye hacia adelante/atrás.
 
-| Nombre                                    | Imagen                        |
-| ----------------------------------------- | ----------------------------- |
-| **Sol**                                   | `sol.png`                     |
-| **Planeta Rocoso (Terranis)**             | `planeta_rocoso.png`          |
-| **Luna (Lunaris)**                        | `luna.png`                    |
-| **Planeta Volcánico (Vulkar)**            | `lava.png`                    |
-| **Planeta Azul (Aquahelion)**             | `planeta_azul.png`            |
-| **Gigante Gaseoso con Anillos (Jovarik)** | `planeta_gaseoso_anillos.png` |
-| **Sistema completo**                      | `planetas_general.png`        |
+## 🧭 Controles
 
----
+| Tecla | Acción |
+| ----- | ------ |
+| `W` / `S` | Acelera / frena la nave |
+| `A` / `D` | Gira la nave (Yaw) |
+| `Shift` | Boost de aceleración |
+| `Up` / `Down` | Acerca / aleja la cámara (mantiene look-at) |
+| `P` | Pausa / reanuda la simulación |
+| `O` | Captura PNG (`screenshot_X.png`) |
+| `Esc` | Cierra la aplicación |
 
-# 🛰 Video de Orbitas, Rotación y Toma de Capturas
+## 🔧 Cómo compilar y ejecutar
 
-Mira el video completo del funcionamiento aquí:
-👉 **[https://youtu.be/i75bjKmrTxE](https://youtu.be/i75bjKmrTxE)**
-
----
-
-# 🎮 Controles del sistema
-
-### 🚀 Movimiento de cámara
-
-| Tecla | Acción                      |
-| ----- | --------------------------- |
-| **W** | Mover cámara hacia arriba   |
-| **S** | Mover cámara hacia abajo    |
-| **A** | Mover cámara a la izquierda |
-| **D** | Mover cámara a la derecha   |
-
----
-
-### 🪐 Selección de planetas
-
-| Tecla | Selecciona                    |
-| ----- | ----------------------------- |
-| **1** | Sol                           |
-| **2** | Vulkar (lava)                 |
-| **3** | Terranis (rocoso)             |
-| **4** | Lunaris (luna)                |
-| **5** | Jovarik (gaseoso con anillos) |
-| **6** | Glaciaron (gigante de hielo)  |
-
----
-
-### 🔁 Rotar planeta seleccionado
-
-| Tecla | Acción     |
-| ----- | ---------- |
-| **Z** | Rotación − |
-| **X** | Rotación + |
-
----
-
-### 🔍 Cambiar escala del planeta seleccionado
-
-| Tecla | Acción           |
-| ----- | ---------------- |
-| **C** | Aumentar tamaño  |
-| **V** | Disminuir tamaño |
-
----
-
-### ⏸ Pausar / Reanudar animación
-
-| Tecla | Acción                   |
-| ----- | ------------------------ |
-| **P** | Toggle de pausa/reanudar |
-
----
-
-### 📸 Captura de pantalla
-
-| Tecla | Acción                                  |
-| ----- | --------------------------------------- |
-| **O** | Guardar captura como `screenshot_X.png` |
-
----
-
-# ⚙ Cómo correr el proyecto
-
-Requisitos:
-
-* Rust instalado
-* Cargo instalado
-
-Ejecutar:
+Necesitas Rust (cargo) instalado. Corre en modo release para un rendimiento decente:
 
 ```bash
 cargo run --release
 ```
 
-(Muy importante usar `--release`, ya que el renderer utiliza **Rayon** para paralelizar y acelerar el proceso).
+El renderer usa `rayon` para paralelizar los stages del pipeline y mantener un frame rate jugable.
 
----
-
-# 📁 Estructura del proyecto
+## 📁 Estructura clave
 
 ```
 /src
- ├── main.rs           # Lógica principal del sistema solar
- ├── shaders.rs        # Shaders procedurales de colores
- ├── fragment.rs       # Estructura de fragmentos
- ├── framebuffer.rs    # Framebuffer y Z-buffer
- ├── triangle.rs       # Rasterización
- ├── vertex.rs         # Vertex shader
- ├── screenshot.rs     # Utilidad para guardar imágenes PNG
+ ├─ main.rs        # Lógica del sistema solar + cámara + ship
+ ├─ shaders.rs     # Shaders procedurales por tipo de planeta/nave
+ ├─ triangle.rs    # Rasterización con barycentric
+ ├─ framebuffer.rs # Framebuffer + Z-buffer
+ ├─ line.rs        # Dibujo auxiliar (no usado en runtime)
+ ├─ vertex.rs      # Representación de vértices y colores
+ ├─ obj.rs         # Loader OBJ / generación de arrays de vértices
+ └─ screenshot.rs  # Guardado de capturas en PNG
+
 /assets/models
- └── sphere.obj        # Modelo base para todos los planetas
+ ├─ sphere.obj     # Geometría base para planetas
+ └─ ship.obj       # Modelo de la nave (camara)
 ```
 
----
+## 🧠 Diseño técnico adicional
 
-# 🧠 Explicación técnica del render
+* La cámara (look-at) usa `forward = ship.forward()` y mantiene el mismo yaw que mueve al modelo.
+* El sistema solar se dibuja centrado en el origen, de modo que la nave solo necesita moverse con su física para navegar entre los planetas.
+* El starfield y las órbitas se recalculan por frame, dando sensación de profundidad.
 
-El pipeline implementado:
+## 👤 Autor
 
-1. **Vertex Shader**
-   Transforma cada vértice aplicando matriz de modelo y animaciones.
-
-2. **Primitive Assembly**
-   Agrupa vértices en triángulos.
-
-3. **Rasterización**
-   Conversión del triángulo a fragmentos individuales (pixel shader).
-
-4. **Fragment Shader**
-   Combina capas de color, funciones matemáticas y animaciones para generar el resultado final.
-
-5. **Z-Buffer**
-   Evita que los planetas se sobreescriban incorrectamente.
-
-6. **Paralelización con Rayon**
-
-   * Vertex shader en paralelo
-   * Fragmentos en paralelo
-     Aumentando significativamente la velocidad.
-
----
-
-# 👤 Autor
-
-**Esteban Cárcamo**
-UVG
-Laboratorio de Gráficas por Computadora
-
----
+*Laboratorio 3 y 4 fusionados en el Proyecto 3 “Space Travel” (sistema solar + nave/cámara).*
